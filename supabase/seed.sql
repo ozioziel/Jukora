@@ -1,0 +1,49 @@
+-- DATOS DEMO: catálogo ficticio para desarrollo local y demostración.
+-- Ninguna empresa, precio, plazo o reseña de este archivo es real. Todo lleva is_demo = true
+-- y la interfaz lo muestra con la etiqueta «DEMO». No usar como datos de producción.
+
+insert into public.app_users (id, stellar_address, auth_method, display_name, modes, active_mode, is_demo, kyc_status) values
+  ('00000000-0000-4000-8000-000000000001', 'GDUBQE2F2P7KWF2EO7RE3MSOJJKBBG25C4ZOMRZUZLXZKH2COXHHQJAC', 'demo', 'Proveedor DEMO 1', '{buyer,supplier}', 'supplier', true, 'approved'),
+  ('00000000-0000-4000-8000-000000000002', 'GAGOUC4PZUYH7HCH4APUAWM36DHM6KK6KQ5IYFM6PFWRUVFI5TCW7KWD', 'demo', 'Proveedor DEMO 2', '{buyer,supplier}', 'supplier', true, 'approved'),
+  ('00000000-0000-4000-8000-000000000003', 'GDONNKP73JMWEZTR462WJD7I7ELXLO7EU7MKIL4Q7LWIBSJAEPEON3HV', 'demo', 'Proveedor DEMO 3', '{buyer,supplier}', 'supplier', true, 'approved'),
+  ('00000000-0000-4000-8000-000000000004', 'GAHQUUZT6KGGH7MR2PSWJKSTIDCXV43LK6S6M5PNFCWU4MQQD2V7EFCE', 'demo', 'Proveedor DEMO 4', '{buyer,supplier}', 'supplier', true, 'not_started'),
+  ('00000000-0000-4000-8000-000000000005', 'GC62PJTZMCZTTY724SB2WM4YT3M2FZ6JKG3UI6GBBMN64M4QYEWXRNE7', 'demo', 'Proveedor DEMO 5', '{buyer,supplier}', 'supplier', true, 'pending'),
+  ('00000000-0000-4000-8000-000000000006', 'GDIUVGSJAFC6TOHDY4H6ZC47DGIRWRYG7ZWQFYYGJ64ONFTXDE22JQI4', 'demo', 'Proveedor DEMO 6', '{buyer,supplier}', 'supplier', true, 'not_started'),
+  ('00000000-0000-4000-8000-000000000007', 'GDYTCKTCOT5OB4HFT37FCF7HJIZ7UK2NUBKZOWYE5NQTPWVRVR4Z3A2J', 'demo', 'Comprador DEMO', '{buyer}', 'buyer', true, 'approved');
+
+insert into public.organizations (id, owner_id, name, description, country, city, trust, kyb_verified_at, payout_address, is_demo) values
+  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Parrillas Altiplano (DEMO)', 'Fabricación y venta de parrillas y equipos de cocción. Empresa ficticia para la demostración.', 'BO', 'La Paz', 'kyb_verified', now() - interval '40 days', 'GDUBQE2F2P7KWF2EO7RE3MSOJJKBBG25C4ZOMRZUZLXZKH2COXHHQJAC', true),
+  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000002', 'Frío Andino (DEMO)', 'Refrigeración comercial. Empresa ficticia para la demostración.', 'BO', 'Cochabamba', 'registered', null, 'GAGOUC4PZUYH7HCH4APUAWM36DHM6KK6KQ5IYFM6PFWRUVFI5TCW7KWD', true),
+  ('10000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000003', 'Muebles del Valle (DEMO)', 'Mobiliario para restaurantes y cafeterías. Empresa ficticia para la demostración.', 'BO', 'Tarija', 'kyb_verified', now() - interval '15 days', 'GDONNKP73JMWEZTR462WJD7I7ELXLO7EU7MKIL4Q7LWIBSJAEPEON3HV', true),
+  ('10000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000004', 'Cocinas del Pacífico (DEMO)', 'Equipamiento gastronómico. Empresa ficticia para la demostración.', 'PE', 'Lima', 'registered', null, 'GAHQUUZT6KGGH7MR2PSWJKSTIDCXV43LK6S6M5PNFCWU4MQQD2V7EFCE', true),
+  ('10000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000005', 'Inox Sul (DEMO)', 'Acero inoxidable para cocinas industriales. Empresa ficticia para la demostración.', 'BR', 'São Paulo', 'kyb_pending', null, 'GC62PJTZMCZTTY724SB2WM4YT3M2FZ6JKG3UI6GBBMN64M4QYEWXRNE7', true),
+  ('10000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000006', 'Equipos Yungas (DEMO)', 'Máquinas de café y equipos de barra. Empresa ficticia para la demostración.', 'BO', 'La Paz', 'registered', null, 'GDIUVGSJAFC6TOHDY4H6ZC47DGIRWRYG7ZWQFYYGJ64ONFTXDE22JQI4', true);
+
+insert into public.memberships (org_id, user_id, role)
+select o.id, o.owner_id, 'owner' from public.organizations o where o.is_demo;
+
+insert into public.listings (org_id, title, description, category, specs, unit, price, currency, stock, min_qty, condition, origin_country, origin_city, ships_to, lead_time_days, warranty, status, is_demo, quote_only) values
+  ('10000000-0000-4000-8000-000000000001', 'Parrilla a gas de 4 quemadores', 'Parrilla grill para hamburguesas y carnes, plancha de hierro fundido. grill burger', 'parrilla', '{"combustible":"gas GLP","quemadores":"4","dimensiones":"90 x 60 cm"}', 'unidad', 450, 'USD', 6, 1, 'new', 'BO', 'La Paz', '{BO}', 2, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000001', 'Plancha freidora de acero 60 cm', 'Plancha griddle para hamburguesas y panes. griddle', 'parrilla', '{"combustible":"gas GLP","dimensiones":"60 x 50 cm"}', 'unidad', 310, 'USD', 4, 1, 'new', 'BO', 'La Paz', '{BO}', 3, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000001', 'Freidora industrial doble canasta', 'Freidora para papas fritas, 2 canastas, 18 litros. fryer', 'freidora', '{"combustible":"gas GLP","capacidad":"18 L"}', 'unidad', 290, 'USD', 5, 1, 'new', 'BO', 'La Paz', '{BO}', 3, '6 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000001', 'Campana extractora 150 cm', 'Campana de extracción de humos para cocina comercial. hood', 'campana', '{"material":"acero inoxidable","ancho":"150 cm","voltaje":"220V"}', 'unidad', null, 'USD', null, 1, 'new', 'BO', 'La Paz', '{BO}', 10, '12 meses', 'published', true, true),
+  ('10000000-0000-4000-8000-000000000004', 'Parrilla grill a gas 4 quemadores', 'Parrilla de acero para restaurantes y hamburgueserías. grill burger', 'parrilla', '{"combustible":"gas GLP","quemadores":"4","dimensiones":"92 x 61 cm"}', 'unidad', 380, 'USD', 10, 1, 'new', 'PE', 'Lima', '{PE,BO}', 12, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000004', 'Cocina industrial 6 hornillas', 'Cocina de alto rendimiento para restaurantes. stove', 'cocina', '{"combustible":"gas GLP","hornillas":"6"}', 'unidad', 690, 'USD', 3, 1, 'new', 'PE', 'Lima', '{PE,BO}', 15, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000005', 'Parrilla charbroiler inox 4 queimadores', 'Parrilla charbroiler de acero inoxidable. grill burger', 'parrilla', '{"combustible":"gas natural","quemadores":"4","dimensiones":"91 x 70 cm"}', 'unidad', 560, 'USD', 8, 1, 'new', 'BR', 'São Paulo', '{BR,BO,PE}', 18, '24 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000005', 'Mesa de trabajo de acero inoxidable', 'Mesa inox para preparación de alimentos. worktable', 'mesa de trabajo', '{"material":"acero inoxidable 304","dimensiones":"150 x 70 cm"}', 'unidad', 240, 'USD', 12, 1, 'new', 'BR', 'São Paulo', '{BR,BO,PE}', 18, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000002', 'Refrigerador vertical 2 puertas 1000 L', 'Refrigerador comercial para insumos. refrigerator fridge', 'refrigerador', '{"capacidad":"1000 L","voltaje":"220V","temperatura":"2 a 8 °C"}', 'unidad', 1250, 'USD', 4, 1, 'new', 'BO', 'Cochabamba', '{BO}', 5, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000002', 'Congelador horizontal 400 L', 'Congelador para carnes y panes. freezer', 'congelador', '{"capacidad":"400 L","voltaje":"220V"}', 'unidad', 620, 'USD', 6, 1, 'new', 'BO', 'Cochabamba', '{BO}', 5, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000002', 'Refrigerador vertical usado 600 L', 'Equipo usado revisado, puerta de vidrio. refrigerator used', 'refrigerador', '{"capacidad":"600 L","voltaje":"220V"}', 'unidad', 480, 'USD', 2, 1, 'used', 'BO', 'Cochabamba', '{BO}', 3, '3 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000003', 'Mesa de madera para 4 personas', 'Mesa de restaurante en madera de tajibo tratada. table', 'mesa', '{"material":"madera","medidas":"80 x 80 cm"}', 'unidad', 95, 'USD', 30, 2, 'new', 'BO', 'Tarija', '{BO}', 7, '6 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000003', 'Silla de restaurante apilable', 'Silla de madera y metal, apilable. chair', 'silla', '{"material":"madera y metal"}', 'unidad', 32, 'USD', 200, 4, 'new', 'BO', 'Tarija', '{BO}', 7, '6 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000003', 'Barra mostrador de madera 2 m', 'Barra para atención al cliente. counter', 'mostrador', '{"material":"madera","largo":"200 cm"}', 'unidad', null, 'USD', null, 1, 'new', 'BO', 'Tarija', '{BO}', 20, '6 meses', 'published', true, true),
+  ('10000000-0000-4000-8000-000000000006', 'Máquina de espresso 2 grupos', 'Cafetera espresso profesional para cafeterías. espresso machine', 'máquina de café', '{"grupos":"2","voltaje":"220V","caldera":"11 L"}', 'unidad', 2100, 'USD', 2, 1, 'new', 'BO', 'La Paz', '{BO}', 10, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000006', 'Molino de café profesional', 'Molino con dosificador para espresso. grinder', 'molino', '{"voltaje":"220V","muelas":"64 mm"}', 'unidad', 540, 'USD', 4, 1, 'new', 'BO', 'La Paz', '{BO}', 10, '12 meses', 'published', true, false),
+  ('10000000-0000-4000-8000-000000000006', 'Set de utensilios de cocina (12 piezas)', 'Espátulas, pinzas, cucharones y cuchillos. utensils', 'utensilios', '{"piezas":"12","material":"acero inoxidable"}', 'set', 75, 'USD', 40, 1, 'new', 'BO', 'La Paz', '{BO}', 2, '3 meses', 'published', true, false);
+
+-- Reseñas sintéticas DEMO (sin pedido real asociado).
+insert into public.reviews (author_id, org_id, supplier_rating, product_rating, comment, is_demo) values
+  ('00000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000001', 5, 5, 'Reseña DEMO: entrega en el plazo acordado.', true),
+  ('00000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000001', 4, 4, 'Reseña DEMO: buena comunicación.', true),
+  ('00000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000003', 5, 4, 'Reseña DEMO: mobiliario como en la descripción.', true),
+  ('00000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000004', 4, null, 'Reseña DEMO: respondió la cotización en dos días.', true);

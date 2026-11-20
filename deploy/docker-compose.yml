@@ -1,0 +1,50 @@
+# Ejecución local con contenedores (la base de datos es Supabase local: `npm run db:start`).
+# Uso: docker compose -f deploy/docker-compose.yml --env-file .env up --build
+name: jucumari
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      # Desde el contenedor, la base local de Supabase está en el host.
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:55322/postgres}
+      SUPABASE_URL: ${DOCKER_SUPABASE_URL:-http://host.docker.internal:55321}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks: [internal]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_STELLAR_NETWORK: ${VITE_STELLAR_NETWORK:-testnet}
+        VITE_DEMO_MODE: ${VITE_DEMO_MODE:-true}
+        VITE_POLLAR_PUBLISHABLE_KEY: ${VITE_POLLAR_PUBLISHABLE_KEY:-}
+    depends_on: [api]
+    ports:
+      - '8080:80'
+    networks: [internal]
+    restart: unless-stopped
+
+  # IA privada opcional (perfil «ai»). Nunca publicar su puerto: la API la usa por red interna.
+  ollama:
+    image: ollama/ollama:0.12.6
+    profiles: [ai]
+    volumes:
+      - ollama:/root/.ollama
+    networks: [internal]
+    restart: unless-stopped
+
+networks:
+  internal: {}
+
+volumes:
+  ollama: {}

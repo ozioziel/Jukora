@@ -1,0 +1,89 @@
+# Despliegue CONTROLADO por el responsable: solo se ejecuta a mano (workflow_dispatch) y requiere
+# la aprobación del Environment «production» configurado en GitHub. No escribe en el repositorio.
+name: CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Versión de imagen (ej. v0.1.0)'
+        required: true
+      run_migrations:
+        description: 'Aplicar migraciones de Supabase antes de desplegar'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/api.Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/jucumari-api:${{ inputs.tag }}
+      - name: Web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/web.Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/jucumari-web:${{ inputs.tag }}
+          build-args: |
+            VITE_API_URL=/api
+            VITE_STELLAR_NETWORK=${{ vars.VITE_STELLAR_NETWORK || 'testnet' }}
+            VITE_DEMO_MODE=${{ vars.VITE_DEMO_MODE || 'true' }}
+            VITE_POLLAR_PUBLISHABLE_KEY=${{ vars.VITE_POLLAR_PUBLISHABLE_KEY }}
+
+  migrations:
+    if: ${{ inputs.run_migrations }}
+    needs: images
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Supabase db push (migraciones explícitas, nunca reset)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: npx --yes supabase@2.119.0 db push --db-url "$SUPABASE_DB_URL"
+
+  deploy:
+    needs: [images, migrations]
+    if: ${{ always() && needs.images.result == 'success' && (needs.migrations.result == 'success' || needs.migrations.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Desplegar en el VPS por SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          TAG: ${{ inputs.tag }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_deploy "$USER@$HOST" "cd ~/jucumari && \
+            echo \"$TAG\" > .previous_tag.new && (cat .current_tag 2>/dev/null || echo none) > .previous_tag && mv .previous_tag.new .current_tag && \
+            GHCR_OWNER=$OWNER IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml pull && \
+            GHCR_OWNER=$OWNER IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml up -d && \
+            sleep 15 && curl -fsS http://127.0.0.1:\${WEB_PORT:-8080}/api/health/ready"

@@ -1,0 +1,74 @@
+# Integración continua: lint, tipos, pruebas (con Supabase local desechable), build y Docker sin publicar.
+# Sin secretos: los PR de forks se ejecutan con permisos de solo lectura.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test -w @jucumari/shared
+
+      - name: Supabase local (desechable)
+        run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,mailpit,gotrue
+
+      - name: Variables de prueba (no son secretos reales)
+        run: |
+          cp .env.example .env
+          SERVICE_KEY=$(docker inspect supabase_storage_jucumari --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^SERVICE_KEY=//p')
+          sed -i "s|^SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=${SERVICE_KEY}|" .env
+          sed -i "s|^SESSION_SECRET=.*|SESSION_SECRET=ci-$(openssl rand -hex 24)|" .env
+
+      - name: Pruebas de API (integración con Postgres)
+        run: npm run test -w @jucumari/api
+
+      - name: Lint de la base
+        run: npx supabase db lint --level error
+
+      - run: npm run build -w @jucumari/web
+      - run: npx supabase stop --no-backup
+        if: always()
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build API (sin publicar)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/api.Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build web (sin publicar)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/web.Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
