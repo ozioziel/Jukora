@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # Web estática (Vite) servida por Nginx, que además hace de proxy hacia la API interna.
-FROM node:24-alpine AS build
+# Multi-arquitectura: el build de Vite corre nativo ($BUILDPLATFORM) porque produce archivos
+# estáticos; solo la imagen final de Nginx es de la arquitectura de destino (ej. linux/arm64).
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/

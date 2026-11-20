@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1.7
-# API NestJS. Multi-etapa: compila con dependencias de desarrollo y ejecuta solo con las de producción.
-FROM node:24-alpine AS build
+# API NestJS. Multi-etapa y multi-arquitectura (linux/amd64 y linux/arm64):
+#  - «build» corre en la arquitectura del equipo que construye ($BUILDPLATFORM): el JavaScript
+#    compilado sirve para cualquier procesador, así se evita compilar emulado (lento).
+#  - «deps» y «runtime» son de la arquitectura de destino ($TARGETPLATFORM): las dependencias de
+#    producción pueden traer binarios nativos y deben corresponder al procesador del VPS.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
