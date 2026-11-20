@@ -1,7 +1,7 @@
 # Despliegue en el VPS (Oracle Cloud ARM64)
 
 Lo ejecuta el responsable. El VPS ya aloja otros proyectos: este despliegue **no** toca sus
-contenedores ni su proxy; la web escucha solo en `127.0.0.1:8080` y el proxy existente la publica.
+contenedores ni su proxy; la web escucha solo en `127.0.0.1:6704` y el proxy existente la publica.
 
 Orden recomendado: 1 → 9. Los secretos se escriben **solo** en el VPS o en GitHub, nunca en el
 repositorio ni en chats.
@@ -56,7 +56,7 @@ La sesión usa cookies seguras: hace falta HTTPS. Sin comprar dominio:
    sudo iptables -I INPUT 6 -p tcp -m multiport --dports 80,443 -j ACCEPT
    sudo netfilter-persistent save
    ```
-   (Si el VPS ya sirve otros sitios por 80/443, esto ya está hecho.) **No** abrir 3000, 8080 ni 11434.
+   (Si el VPS ya sirve otros sitios por 80/443, esto ya está hecho.) **No** abrir 3000, 6704 ni 11434.
 
 ## 4. Proxy hacia la app
 
@@ -68,7 +68,7 @@ Añade un sitio en el proxy que ya usa el VPS.
 server {
   server_name jukora.duckdns.org;
   location / {
-    proxy_pass http://127.0.0.1:8080;
+    proxy_pass http://127.0.0.1:6704;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -87,7 +87,7 @@ sudo certbot --nginx -d jukora.duckdns.org      # certificado Let's Encrypt grat
 
 ```
 jukora.duckdns.org {
-  reverse_proxy 127.0.0.1:8080 {
+  reverse_proxy 127.0.0.1:6704 {
     flush_interval -1
   }
 }
@@ -161,7 +161,7 @@ Settings del repositorio → **Environments → New environment** → `productio
 - **Environment secrets**: `VPS_HOST` (IP o `jukora.duckdns.org`), `VPS_USER` (`deploy`),
   `VPS_SSH_KEY` (llave privada del paso 2), `VPS_KNOWN_HOSTS` (salida de `ssh-keyscan`),
   `SUPABASE_DB_URL` (cadena del *Session pooler*).
-- **Environment variables**: `VPS_APP_DIR` (por defecto `/srv/penguinlab/apps/jukora`), `VPS_WEB_PORT` (por defecto `8080`; cámbialo si otro proyecto ya usa ese puerto), `VITE_STELLAR_NETWORK=testnet`, `VITE_DEMO_MODE=true` y, cuando la
+- **Environment variables**: `VPS_APP_DIR` (por defecto `/srv/penguinlab/apps/jukora`), `VPS_WEB_PORT` (por defecto `6704`), `VITE_STELLAR_NETWORK=testnet`, `VITE_DEMO_MODE=true` y, cuando la
   tengas, `VITE_POLLAR_PUBLISHABLE_KEY` (pública).
 
 ## 9. Primer despliegue
@@ -180,7 +180,7 @@ Comprobación manual en el VPS:
 
 ```bash
 cd /srv/penguinlab/apps/jukora && docker compose -f docker-compose.prod.yml ps
-curl -fsS http://127.0.0.1:8080/api/health/ready
+curl -fsS http://127.0.0.1:6704/api/health/ready
 ```
 
 Rollback: vuelve a ejecutar el CD con el tag anterior (queda guardado en `/srv/penguinlab/apps/jukora/.previous_tag`).

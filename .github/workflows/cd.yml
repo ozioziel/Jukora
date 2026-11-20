@@ -94,7 +94,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           # Carpeta y puerto local de la app en el VPS (variables del Environment; con valores por defecto).
           APP_DIR: ${{ vars.VPS_APP_DIR || '/srv/penguinlab/apps/jukora' }}
-          PORT: ${{ vars.VPS_WEB_PORT || '8080' }}
+          PORT: ${{ vars.VPS_WEB_PORT || '6704' }}
         run: |
           install -m 700 -d ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
