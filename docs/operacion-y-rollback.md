@@ -11,9 +11,9 @@
 ## Rollback de versión
 
 ```bash
-cd ~/jucumari
+cd /srv/penguinlab/apps/jukora        # o la carpeta definida en VPS_APP_DIR
 PREV=$(cat .previous_tag)
-GHCR_OWNER=<owner> IMAGE_TAG=$PREV docker compose -f docker-compose.prod.yml up -d
+GHCR_OWNER=<owner> IMAGE_TAG=$PREV WEB_PORT=8080 docker compose -f docker-compose.prod.yml up -d
 curl -fsS http://127.0.0.1:8080/api/health/ready && echo "$PREV" > .current_tag
 ```
 

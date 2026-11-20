@@ -92,12 +92,15 @@ jobs:
           KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           TAG: ${{ inputs.tag }}
           OWNER: ${{ github.repository_owner }}
+          # Carpeta y puerto local de la app en el VPS (variables del Environment; con valores por defecto).
+          APP_DIR: ${{ vars.VPS_APP_DIR || '/srv/penguinlab/apps/jukora' }}
+          PORT: ${{ vars.VPS_WEB_PORT || '8080' }}
         run: |
           install -m 700 -d ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
           echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_deploy "$USER@$HOST" "cd ~/jucumari && \
+          ssh -i ~/.ssh/id_deploy "$USER@$HOST" "cd '$APP_DIR' && \
             echo \"$TAG\" > .previous_tag.new && (cat .current_tag 2>/dev/null || echo none) > .previous_tag && mv .previous_tag.new .current_tag && \
-            GHCR_OWNER=$OWNER IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml pull && \
-            GHCR_OWNER=$OWNER IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml up -d && \
-            sleep 20 && curl -fsS http://127.0.0.1:\${WEB_PORT:-8080}/api/health/ready"
+            GHCR_OWNER=$OWNER IMAGE_TAG=$TAG WEB_PORT=$PORT docker compose -f docker-compose.prod.yml pull && \
+            GHCR_OWNER=$OWNER IMAGE_TAG=$TAG WEB_PORT=$PORT docker compose -f docker-compose.prod.yml up -d && \
+            sleep 20 && curl -fsS http://127.0.0.1:$PORT/api/health/ready"
