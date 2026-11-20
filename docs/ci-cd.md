@@ -29,16 +29,18 @@ Ningún workflow escribe en el repositorio ni hace push de código.
 | Environment secrets | `VPS_HOST`, `VPS_USER` | IP/dominio y usuario del VPS |
 | Environment secrets | `VPS_SSH_KEY` | llave privada **dedicada** al despliegue (solo para este usuario) |
 | Environment secrets | `VPS_KNOWN_HOSTS` | salida de `ssh-keyscan <host>` verificada |
-| Environment secrets | `SUPABASE_DB_URL` | cadena de conexión directa de Supabase |
+| Environment secrets | `SUPABASE_DB_URL` | cadena del *Session pooler* de Supabase (IPv4) |
 | Environment variables | `VITE_STELLAR_NETWORK`, `VITE_DEMO_MODE`, `VITE_POLLAR_PUBLISHABLE_KEY` | valores públicos de la web |
 | Settings → Actions → General | Workflow permissions | «Read repository contents» |
 
 ## Arquitectura de las imágenes
 
-El VPS es ARM64. Para publicar imágenes ARM, añadir en `cd.yml` antes de construir:
+El VPS es Oracle Cloud ARM64 (`aarch64`). Por eso:
 
-```yaml
-- uses: docker/setup-qemu-action@v3
-```
-
-y en cada `build-push-action`: `platforms: linux/amd64,linux/arm64`. (Comprobado en local solo `linux/amd64`.)
+- El **CD** publica las imágenes para `linux/arm64` (entrada `platforms`; se puede pedir
+  `linux/amd64,linux/arm64` si algún día se despliega en otro servidor).
+- El **CI** construye también para `linux/arm64`, así un fallo de arquitectura aparece en el PR y no en el despliegue.
+- En los Dockerfiles, la compilación (TypeScript, Vite) corre nativa con `--platform=$BUILDPLATFORM`
+  porque su resultado sirve para cualquier procesador; solo la instalación de dependencias de producción
+  de la API y las imágenes finales son ARM64 (emuladas con QEMU en GitHub Actions).
+- Se usa la caché de GitHub Actions (`type=gha`) para que los builds siguientes sean rápidos.
