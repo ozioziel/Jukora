@@ -1,0 +1,9 @@
+planeacion/
+dist/
+coverage/
+node_modules/
+package-lock.json
+supabase/.temp/
+playwright-report/
+test-results/
+apps/api/src/database/database.types.ts

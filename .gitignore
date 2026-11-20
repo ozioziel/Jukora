@@ -1,0 +1,41 @@
+# Planeación privada (no versionar)
+/planeacion/
+
+# Dependencias y builds
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+.demo-keys.json
+
+# Caché de Python (scripts de Blender)
+__pycache__/
+*.pyc
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Pruebas
+playwright-report/
+test-results/
+blob-report/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.claude/

@@ -1,0 +1,51 @@
+{
+  "name": "jucumari",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Plataforma web para encontrar, cotizar y comprar con protección los recursos que necesita un negocio.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
+  "scripts": {
+    "build:shared": "npm run build -w @jucumari/shared",
+    "build": "npm run build:shared && npm run build -w @jucumari/api && npm run build -w @jucumari/web",
+    "dev": "npm run build:shared && concurrently -n api,web -c yellow,cyan \"npm run dev -w @jucumari/api\" \"npm run dev -w @jucumari/web\"",
+    "dev:api": "npm run build:shared && npm run dev -w @jucumari/api",
+    "dev:web": "npm run dev -w @jucumari/web",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset",
+    "db:lint": "supabase db lint",
+    "db:test": "supabase test db",
+    "setup:local": "node scripts/setup-local-env.mjs",
+    "stellar:setup": "node scripts/stellar-testnet-setup.mjs",
+    "roles:assign": "node scripts/assign-role.mjs",
+    "preflight": "node scripts/preflight.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.65.1",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "supabase": "2.119.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.73.0"
+  }
+}
