@@ -1,0 +1,47 @@
+# Producción en el VPS (lo ejecuta el responsable, nunca un agente).
+# Imágenes versionadas desde GHCR; la web escucha solo en 127.0.0.1 para el proxy existente del VPS.
+# Uso: IMAGE_TAG=v0.1.0 docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+name: jucumari
+
+services:
+  api:
+    image: ghcr.io/${GHCR_OWNER:?define GHCR_OWNER}/jucumari-api:${IMAGE_TAG:?define IMAGE_TAG}
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+    networks: [internal]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  web:
+    image: ghcr.io/${GHCR_OWNER}/jucumari-web:${IMAGE_TAG}
+    depends_on: [api]
+    ports:
+      - '127.0.0.1:${WEB_PORT:-8080}:80'
+    networks: [internal]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  ollama:
+    image: ollama/ollama:0.12.6
+    profiles: [ai]
+    volumes:
+      - ollama:/root/.ollama
+    networks: [internal]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+
+networks:
+  internal: {}
+
+volumes:
+  ollama: {}
