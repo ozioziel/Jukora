@@ -1,5 +1,6 @@
 # Despliegue CONTROLADO por el responsable: solo se ejecuta a mano (workflow_dispatch) y requiere
 # la aprobación del Environment «production» configurado en GitHub. No escribe en el repositorio.
+# El VPS es Oracle Cloud ARM64 (aarch64): las imágenes se publican para linux/arm64 por defecto.
 name: CD
 
 on:
@@ -12,6 +13,9 @@ on:
         description: 'Aplicar migraciones de Supabase antes de desplegar'
         type: boolean
         default: false
+      platforms:
+        description: 'Arquitecturas de las imágenes (el VPS es linux/arm64)'
+        default: 'linux/arm64'
 
 permissions:
   contents: read
@@ -21,8 +25,12 @@ jobs:
   images:
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      # QEMU: solo las etapas que dependen del procesador (instalación de dependencias de
+      # producción de la API) se ejecutan emuladas; TypeScript y Vite compilan nativo.
+      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -34,15 +42,21 @@ jobs:
         with:
           context: .
           file: deploy/api.Dockerfile
+          platforms: ${{ inputs.platforms }}
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/jucumari-api:${{ inputs.tag }}
+          cache-from: type=gha,scope=cd-api
+          cache-to: type=gha,mode=max,scope=cd-api
       - name: Web
         uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/web.Dockerfile
+          platforms: ${{ inputs.platforms }}
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/jucumari-web:${{ inputs.tag }}
+          cache-from: type=gha,scope=cd-web
+          cache-to: type=gha,mode=max,scope=cd-web
           build-args: |
             VITE_API_URL=/api
             VITE_STELLAR_NETWORK=${{ vars.VITE_STELLAR_NETWORK || 'testnet' }}
@@ -86,4 +100,4 @@ jobs:
             echo \"$TAG\" > .previous_tag.new && (cat .current_tag 2>/dev/null || echo none) > .previous_tag && mv .previous_tag.new .current_tag && \
             GHCR_OWNER=$OWNER IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml pull && \
             GHCR_OWNER=$OWNER IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml up -d && \
-            sleep 15 && curl -fsS http://127.0.0.1:\${WEB_PORT:-8080}/api/health/ready"
+            sleep 20 && curl -fsS http://127.0.0.1:\${WEB_PORT:-8080}/api/health/ready"

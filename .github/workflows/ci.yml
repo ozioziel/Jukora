@@ -55,20 +55,24 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      # Se construye para la arquitectura real del VPS (Oracle ARM64) para detectar fallos antes del merge.
+      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
-      - name: Build API (sin publicar)
+      - name: Build API linux/arm64 (sin publicar)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/api.Dockerfile
+          platforms: linux/arm64
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Build web (sin publicar)
+          cache-from: type=gha,scope=ci-api
+          cache-to: type=gha,mode=max,scope=ci-api
+      - name: Build web linux/arm64 (sin publicar)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/web.Dockerfile
+          platforms: linux/arm64
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=ci-web
+          cache-to: type=gha,mode=max,scope=ci-web
