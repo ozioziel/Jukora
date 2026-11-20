@@ -1,0 +1,1184 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/manrope';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/unbounded';
+
+/* ─────────────── Tokens ───────────────
+   Base carbón nocturno, crema para leer, ámbar de estrella para acción y foco.
+   Contraste medido (WCAG AA) en docs/diseno.md. */
+@theme {
+  --color-night: #0b0d12;
+  --color-night-2: #10131a;
+  --color-surface: #161a22;
+  --color-surface-2: #1d222c;
+  --color-line: #2b313c;
+  --color-line-soft: #222731;
+  --color-cream: #f3e9d7;
+  /* sobre el cielo claro el texto secundario va lavanda claro; dentro del vidrio pasa a --color-ink-2 */
+  --color-muted: #dcd6ea;
+  --color-amber: #f2a93b;
+  --color-amber-2: #ffc46b;
+  --color-terracotta: #c9573c;
+  --color-teal: #3fb8b0;
+  --color-success: #6db283;
+  --color-warning: #e8b44c;
+  --color-danger: #e5735f;
+
+  /* Aguayo (atenuado) y tinta oscura para los paneles de vidrio claro */
+  --color-rojo: #c4363b;
+  --color-naranja: #dc7434;
+  --color-amarillo: #e8bf45;
+  --color-verde: #24905a;
+  --color-fucsia: #cc3a80;
+  --color-morado: #6a3d86;
+  --color-celeste: #56b5d3;
+  --color-ink: #1c1a33;
+  --color-ink-2: #4d4a68;
+  --color-oro: #b8902e;
+
+  --font-sans: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+  /* Rediseño: sans geométrica gruesa. Fraunces queda instalada por si se reutiliza. */
+  --font-display: 'Unbounded Variable', 'Manrope Variable', ui-sans-serif, sans-serif;
+
+  --radius-card: 20px;
+  --ease-star: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  color-scheme: dark;
+  --header-h: 72px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  background: #232a5c;
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  scroll-padding-top: calc(var(--header-h) + 16px);
+}
+
+/* El fondo lo pinta el cielo fijo (<Sky />): crepúsculo claro del altiplano renderizado en Blender. */
+body {
+  min-height: 100dvh;
+  background: transparent;
+}
+
+::selection {
+  background: rgb(242 169 59 / 0.35);
+  color: var(--color-cream);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+@layer components {
+  /* Botón transparente que flota siempre; se queda quieto al pasar el cursor o con foco.
+     La flotación usa la propiedad «translate» para no pisar los transform de hover/press. */
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-2.5 text-sm font-bold tracking-wide whitespace-nowrap select-none;
+    border-color: rgb(255 255 255 / 0.55);
+    color: #fff;
+    background: rgb(255 255 255 / 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: float 3.8s ease-in-out infinite;
+    transition:
+      transform 220ms var(--ease-star),
+      background-color 220ms,
+      border-color 220ms,
+      box-shadow 220ms,
+      color 220ms;
+  }
+  .btn:nth-of-type(2n) {
+    animation-delay: -1.7s;
+  }
+  .btn:hover,
+  .btn:focus-visible {
+    animation-play-state: paused;
+    background: rgb(232 191 69 / 0.16);
+    border-color: rgb(255 255 255 / 0.8);
+    box-shadow: 0 10px 34px -14px rgb(232 191 69 / 0.7);
+  }
+  .btn:active {
+    transform: translateY(-1px) scale(0.98);
+  }
+  .btn[disabled],
+  .btn[aria-disabled='true'] {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .btn-primary {
+    border-color: var(--color-amarillo);
+    color: #fff3c4;
+    background: rgb(232 191 69 / 0.1);
+  }
+  .btn-primary:hover {
+    border-color: var(--color-amarillo);
+    background: rgb(232 191 69 / 0.2);
+    box-shadow:
+      0 0 0 1px rgb(242 169 59 / 0.15),
+      0 12px 34px -12px rgb(242 169 59 / 0.55);
+  }
+  .btn-sm {
+    @apply px-3.5 py-1.5 text-xs;
+  }
+  .btn-lg {
+    @apply px-7 py-3.5 text-base;
+  }
+  .btn-icon {
+    @apply h-11 w-11 p-0;
+  }
+
+  /* Superficies */
+  /* Superficies sobre el cielo claro: vidrio índigo translúcido para las pantallas de gestión. */
+  .glass {
+    background: rgb(22 24 56 / 0.58);
+    backdrop-filter: blur(18px) saturate(130%);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+    border: 1px solid rgb(255 255 255 / 0.18);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass {
+      background: rgb(22 24 56 / 0.96);
+    }
+  }
+  /* Paneles y tarjetas de todas las pantallas: vidrio claro con tinta oscura (los colores pensados
+     para fondo oscuro se adaptan más abajo con :is(.panel, .card-glass, …)). */
+  .panel {
+    @apply rounded-[var(--radius-card)] border p-5 md:p-6;
+    color: var(--color-ink);
+    background: rgb(255 255 255 / 0.64);
+    border-color: rgb(255 255 255 / 0.85);
+    backdrop-filter: blur(18px) saturate(1.1);
+    -webkit-backdrop-filter: blur(18px) saturate(1.1);
+    box-shadow: 0 30px 60px -32px rgb(30 30 80 / 0.45);
+  }
+  .card-glass {
+    @apply rounded-[var(--radius-card)] border;
+    color: var(--color-ink);
+    background: rgb(255 255 255 / 0.56);
+    border-color: rgb(255 255 255 / 0.8);
+    backdrop-filter: blur(16px) saturate(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.1);
+    box-shadow: 0 24px 50px -30px rgb(30 30 80 / 0.45);
+  }
+
+  /* Vidrio claro con texto oscuro: inicio, chat, negocios y Explorar. --c tiñe con el color del sector. */
+  .lglass {
+    color: var(--color-ink);
+    background: color-mix(in oklab, var(--c, #fff) 12%, rgb(255 255 255 / 0.56));
+    border: 1px solid rgb(255 255 255 / 0.75);
+    backdrop-filter: blur(16px) saturate(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.1);
+    box-shadow: 0 30px 60px -30px rgb(30 30 80 / 0.45);
+  }
+  .float-y {
+    animation: drift-y 7s ease-in-out infinite;
+  }
+  .float-y:hover {
+    animation-play-state: paused;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border px-4 py-3 text-[15px] outline-none;
+    /* claro en todas partes: sobre el cielo y dentro del vidrio */
+    background: rgb(255 255 255 / 0.88);
+    border-color: rgb(255 255 255 / 0.7);
+    color: var(--color-ink);
+    transition:
+      border-color 200ms,
+      box-shadow 200ms;
+  }
+  .field::placeholder {
+    color: #6d6a85;
+  }
+  .field:focus {
+    border-color: var(--color-oro);
+    box-shadow: 0 0 0 4px rgb(184 144 46 / 0.18);
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-cream;
+  }
+  .hint {
+    @apply text-xs text-muted;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold;
+    border-color: rgb(243 233 215 / 0.18);
+    color: var(--color-cream);
+  }
+  .chip[aria-pressed='true'],
+  .chip[data-active='true'] {
+    border-color: var(--color-amber);
+    color: var(--color-amber-2);
+    background: rgb(242 169 59 / 0.1);
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase;
+  }
+  .badge-demo {
+    background: #fff3d0;
+    color: #7a4f00;
+    border: 1px dashed rgb(154 116 22 / 0.6);
+  }
+  .badge-testnet {
+    background: #e3f6f4;
+    color: #0f6964;
+    border: 1px solid rgb(15 105 100 / 0.4);
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2.5 text-xs font-bold tracking-[0.18em] uppercase;
+    color: var(--color-amarillo);
+  }
+  .eyebrow::before {
+    content: '';
+    width: 26px;
+    height: 6px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--color-fucsia), var(--color-naranja), var(--color-amarillo), var(--color-verde));
+  }
+  .display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+  .container-x {
+    @apply mx-auto w-full max-w-[1320px] px-4 sm:px-6 lg:px-10;
+  }
+  .sr-only-focusable:not(:focus) {
+    @apply sr-only;
+  }
+}
+
+/* Halo del cursor */
+.cursor-halo {
+  width: 140px;
+  height: 140px;
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 260ms;
+  background: radial-gradient(circle, rgb(242 169 59 / 0.13) 0%, rgb(242 169 59 / 0.05) 38%, transparent 70%);
+  box-shadow: inset 0 0 0 1px rgb(243 233 215 / 0.05);
+  mix-blend-mode: screen;
+  display: grid;
+  place-items: center;
+  will-change: transform;
+}
+.cursor-halo[data-visible='true'] {
+  opacity: 1;
+}
+.cursor-halo[data-hidden='true'] {
+  opacity: 0;
+}
+.cursor-halo[data-flash='true'] {
+  background: radial-gradient(circle, rgb(255 211 138 / 0.28) 0%, rgb(242 169 59 / 0.08) 40%, transparent 70%);
+}
+.cursor-halo-star {
+  width: 12px;
+  height: 12px;
+  color: rgb(255 211 138 / 0.65);
+}
+
+/* Jucumari */
+.jucumari-star {
+  animation: twinkle 3.2s ease-in-out infinite;
+}
+.jucumari-glow {
+  filter: drop-shadow(0 0 10px rgb(242 169 59 / 0.35));
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Casas */
+.house-door {
+  transform-origin: left center;
+  transform-box: fill-box;
+  transition: transform 340ms var(--ease-star);
+}
+.house:hover .house-door,
+.house:focus-visible .house-door,
+.house[data-open='true'] .house-door {
+  transform: perspective(240px) rotateY(-62deg);
+}
+.house-light {
+  opacity: 0;
+  transition: opacity 340ms;
+}
+.house:hover .house-light,
+.house:focus-visible .house-light,
+.house[data-open='true'] .house-light {
+  opacity: 1;
+}
+.house:hover .house-stars,
+.house:focus-visible .house-stars {
+  opacity: 1;
+}
+.house-stars {
+  opacity: 0.35;
+  transition: opacity 400ms;
+}
+
+/* ─────────────── Rediseño 2026-11: cielo, vidrio claro, movimiento ─────────────── */
+@keyframes float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+@keyframes drift-y {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -9px;
+  }
+}
+@keyframes pan {
+  from {
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    scale: 1.07;
+    translate: -1.4% -1%;
+  }
+}
+@keyframes fog-drift {
+  from {
+    transform: translateX(-8%);
+  }
+  to {
+    transform: translateX(8%);
+  }
+}
+@keyframes weave {
+  to {
+    background-position: -960px 50%;
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.985);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes star-fly {
+  0% {
+    opacity: 0;
+    transform: translate(-12vw, 70vh) scale(0.4) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(108vw, -6vh) scale(1.1) rotate(220deg);
+  }
+}
+@keyframes veil {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Cielo fijo */
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: #232a5c;
+}
+.sky-img {
+  position: absolute;
+  inset: -40px;
+  background-size: cover;
+  background-position: center 58%;
+  opacity: 0;
+  filter: blur(var(--sky-blur, 10px)) saturate(0.95) brightness(0.92);
+  transform: scale(1.06);
+  transition:
+    opacity 1.2s ease,
+    filter 1.2s ease;
+  animation: pan 46s ease-in-out infinite alternate;
+}
+.sky-img[data-on='true'] {
+  opacity: 1;
+}
+.sky canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sky-fog {
+  position: absolute;
+  left: -30%;
+  width: 160%;
+  height: 46vh;
+  bottom: -12vh;
+  pointer-events: none;
+  background:
+    radial-gradient(50% 50% at 30% 60%, rgb(255 255 255 / 0.2), transparent 70%),
+    radial-gradient(40% 50% at 75% 55%, rgb(255 240 248 / 0.16), transparent 70%);
+  filter: blur(30px);
+  animation: fog-drift 48s ease-in-out infinite alternate;
+}
+.sky-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(22 26 66 / 0.34) 0%, rgb(22 26 66 / 0.1) 40%, rgb(22 26 66 / 0.12) 70%, rgb(22 26 66 / 0.4) 100%);
+}
+.on-sky {
+  text-shadow: 0 2px 18px rgb(18 20 56 / 0.45);
+}
+
+/* Franja k'isa y banda de pallay (aguayo) */
+.kisa {
+  height: 14px;
+  filter: saturate(0.8) brightness(0.95);
+  background: linear-gradient(180deg, #3a0a2a 0 11%, #8e1458 0 22%, #e3197b 0 33%, #f58bb8 0 44%, #f8c81e 0 56%, #f26b1d 0 67%, #d8262e 0 78%, #8e1426 0 89%, #4a0d16 0);
+}
+.pallay {
+  height: 30px;
+  opacity: 0.7;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='34' viewBox='0 0 96 34'%3E%3Cpath d='M24 3l14 14-14 14L10 17z' fill='none' stroke='%23e8bf45' stroke-width='3'/%3E%3Cpath d='M24 11l6 6-6 6-6-6z' fill='%23cc3a80'/%3E%3Cpath d='M58 9h6v6h6v6h-6v6h-6v-6h-6v-6h6z' fill='%2324905a'/%3E%3Cpath d='M78 25l5-8 5 8M2 25l4-8' fill='none' stroke='%2356b5d3' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")
+    repeat-x 0 50% / 96px 34px;
+  animation: weave 30s linear infinite;
+}
+
+/* Transición entre páginas: entra la página nueva y cruza una estrella */
+/* «backwards» y no «both»: al terminar no debe quedar ningún transform/filter, o los elementos
+   position:fixed de la página (guía, diálogos) pasarían a medirse contra este contenedor. */
+.page-in {
+  animation: iris-in 820ms 420ms var(--ease-star) backwards;
+}
+/* la estrella viaja al centro, late y estalla; la página nueva se forma desde ese punto */
+@keyframes iris-in {
+  from {
+    clip-path: circle(0px at 50% 45vh);
+    filter: blur(6px);
+  }
+  to {
+    clip-path: circle(150vmax at 50% 45vh);
+    filter: blur(0);
+  }
+}
+@keyframes star-to-center {
+  0% {
+    opacity: 0;
+    transform: translate(6vw, 92vh) scale(0.4) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+  }
+  55% {
+    transform: translate(calc(50vw - 23px), calc(45vh - 23px)) scale(1.1) rotate(200deg);
+  }
+  68% {
+    opacity: 1;
+    transform: translate(calc(50vw - 23px), calc(45vh - 23px)) scale(1.9) rotate(220deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(50vw - 23px), calc(45vh - 23px)) scale(0.2) rotate(260deg);
+  }
+}
+@keyframes ring-burst {
+  from {
+    opacity: 0.95;
+    transform: scale(0.1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(9);
+  }
+}
+.star-trans {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  overflow: hidden;
+}
+.star-trans::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(80% 60% at 50% 40%, rgb(255 236 200 / 0.18), transparent 70%);
+  animation: veil 760ms ease-out both;
+}
+.star-trans .star {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  height: 46px;
+  color: #fff3d6;
+  filter: drop-shadow(0 0 14px #ffd27a) drop-shadow(0 0 32px #dc7434);
+  animation: star-to-center 780ms cubic-bezier(0.45, 0, 0.3, 1) both;
+}
+.star-trans .ring {
+  position: absolute;
+  left: 50vw;
+  top: 45vh;
+  width: 80px;
+  height: 80px;
+  margin: -40px 0 0 -40px;
+  border-radius: 50%;
+  border: 2px solid #ffe6b0;
+  box-shadow:
+    0 0 40px 10px rgb(255 214 140 / 0.55),
+    inset 0 0 30px rgb(255 214 140 / 0.5);
+  animation: ring-burst 900ms 430ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Vidrio claro: los controles dentro cambian a tinta oscura */
+:is(.on-light, .panel, .card-glass, .lglass) {
+  color: var(--color-ink);
+}
+/* Utilidades de color heredadas del tema oscuro, adaptadas dentro del vidrio claro */
+:is(.on-light, .panel, .card-glass, .lglass) :is(.text-cream, .text-cream\/80, .text-cream\/85, .text-cream\/90) {
+  color: var(--color-ink);
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.text-muted, .text-muted\/60) {
+  color: var(--color-ink-2);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .text-teal {
+  color: #0f6964;
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.text-amber\/60, .text-amber\/80) {
+  color: #9a7416;
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.border-line, .border-line-soft, .border-cream\/20, .border-cream\/25, .border-muted\/30) {
+  border-color: rgb(28 26 51 / 0.14);
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.border-amber, .border-amber\/40, .border-amber\/50, .border-amber\/70) {
+  border-color: rgb(184 144 46 / 0.6);
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.border-warning\/30, .border-warning\/40, .border-warning\/60) {
+  border-color: rgb(138 83 0 / 0.4);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .border-danger\/40 {
+  border-color: rgb(178 58 40 / 0.45);
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.bg-cream\/5, .bg-cream\/10, .hover\:bg-cream\/5:hover) {
+  background-color: rgb(28 26 51 / 0.06);
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.bg-night, .bg-night-2) {
+  background-color: #fff;
+}
+:is(.on-light, .panel, .card-glass, .lglass) :is(.bg-line, .bg-line-soft) {
+  background-color: rgb(28 26 51 / 0.1);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .bg-amber {
+  background-color: var(--color-oro);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .accent-amber {
+  accent-color: var(--color-oro);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .hover\:text-amber-2:hover,
+:is(.on-light, .panel, .card-glass, .lglass) .group:hover .group-hover\:text-amber-2 {
+  color: #9a7416;
+}
+:is(.on-light, .panel, .card-glass, .lglass) .hover\:border-amber\/40:hover {
+  border-color: rgb(184 144 46 / 0.6);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .field {
+  background: #fff;
+  border-color: rgb(28 26 51 / 0.16);
+  color: var(--color-ink);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .field::placeholder {
+  color: #8a879e;
+}
+:is(.on-light, .panel, .card-glass, .lglass) .field:focus {
+  border-color: var(--color-oro);
+  box-shadow: 0 0 0 4px rgb(184 144 46 / 0.15);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .label,
+:is(.on-light, .panel, .card-glass, .lglass) .text-cream {
+  color: var(--color-ink);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .hint,
+:is(.on-light, .panel, .card-glass, .lglass) .text-muted {
+  color: var(--color-ink-2);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .chip {
+  border-color: rgb(28 26 51 / 0.2);
+  color: var(--color-ink);
+  background: rgb(255 255 255 / 0.6);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .chip[aria-pressed='true'] {
+  border-color: var(--color-oro);
+  color: #5a430c;
+  background: #f6ebcf;
+}
+:is(.on-light, .panel, .card-glass, .lglass) .btn {
+  color: var(--color-ink);
+  border-color: rgb(28 26 51 / 0.24);
+  background: rgb(255 255 255 / 0.6);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .btn-primary {
+  border-color: var(--color-oro);
+  color: #6a4f10;
+  background: rgb(255 248 230 / 0.75);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .border-line-soft {
+  border-color: rgb(28 26 51 / 0.1);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .bg-line-soft {
+  background: rgb(28 26 51 / 0.1);
+}
+:is(.on-light, .panel, .card-glass, .lglass) select.field option {
+  color: var(--color-ink);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .text-cream\/90,
+:is(.on-light, .panel, .card-glass, .lglass) .text-cream\/80 {
+  color: var(--color-ink);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .border-cream\/25 {
+  border-color: rgb(28 26 51 / 0.25);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .text-success {
+  color: #1f7a45;
+}
+:is(.on-light, .panel, .card-glass, .lglass) .border-success\/40 {
+  border-color: rgb(31 122 69 / 0.45);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .text-amber,
+:is(.on-light, .panel, .card-glass, .lglass) .text-amber-2 {
+  color: #9a7416;
+}
+:is(.on-light, .panel, .card-glass, .lglass) .text-warning {
+  color: #8a5300;
+}
+:is(.on-light, .panel, .card-glass, .lglass) .text-danger {
+  color: #b23a28;
+}
+:is(.on-light, .panel, .card-glass, .lglass) .badge-demo {
+  background: #fff3d0;
+  color: #7a4f00;
+  border-color: rgb(154 116 22 / 0.6);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .badge-testnet {
+  background: #e3f6f4;
+  color: #0f6964;
+  border-color: rgb(15 105 100 / 0.4);
+}
+:is(.on-light, .panel, .card-glass, .lglass) .accent-oro {
+  accent-color: var(--color-oro);
+}
+
+/* Galería en arco del inicio */
+.flow-card {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 286px;
+  height: 410px;
+  margin-left: -143px;
+  border-radius: 20px;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.8s var(--ease-star),
+    opacity 0.6s,
+    filter 0.6s;
+  animation: drift-y 7s ease-in-out infinite;
+}
+.flow-card:hover {
+  animation-play-state: paused;
+}
+.flow-card .pic {
+  position: absolute;
+  inset: 8px 8px 112px;
+  border-radius: 14px;
+  background-size: cover;
+  background-position: center 60%;
+  overflow: hidden;
+}
+.flow-card .pic::after {
+  content: '';
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: 10%;
+  height: 18%;
+  background: radial-gradient(50% 50% at 50% 50%, rgb(255 196 120 / 0.22), transparent 70%);
+}
+.flow-card[aria-current='true'] {
+  box-shadow: 0 40px 90px -34px var(--glow, rgb(30 30 80 / 0.5));
+  border-color: color-mix(in oklab, var(--c) 45%, #fff);
+}
+@media (max-width: 900px) {
+  .flow-card {
+    width: 228px;
+    height: 340px;
+    margin-left: -114px;
+  }
+  .flow-card .pic {
+    bottom: 100px;
+  }
+}
+
+/* Casas 2D: silueta nocturna; al pasar el cursor la puerta se abre, sale luz y suben estrellas */
+.house2d {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 0 10px rgb(255 190 110 / 0.22));
+}
+.house2d .door {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform 520ms var(--ease-star);
+}
+.house2d .doorway {
+  opacity: 0;
+  transition: opacity 420ms;
+}
+.house2d .spark {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.house-hover:hover .house2d .door,
+.house-hover:focus-visible .house2d .door {
+  transform: perspective(160px) rotateY(-70deg);
+}
+.house-hover:hover .house2d .doorway,
+.house-hover:focus-visible .house2d .doorway {
+  opacity: 1;
+}
+.house-hover:hover .house2d .spark,
+.house-hover:focus-visible .house2d .spark {
+  animation: spark-up 1.4s ease-out infinite;
+}
+.house-hover:hover .house2d .spark:nth-of-type(2) {
+  animation-delay: 0.35s;
+}
+.house-hover:hover .house2d .spark:nth-of-type(3) {
+  animation-delay: 0.7s;
+}
+.house-hover:hover .house2d .win {
+  fill: #ffe2a8;
+}
+/* Jucumari 2D: respira, parpadea, mueve orejas y bufanda; sonríe y saluda cuando el cursor se acerca */
+.jk {
+  display: block;
+  overflow: visible;
+}
+.jk-live .jk-body {
+  transform-box: view-box;
+  transform-origin: 200px 412px;
+  animation: jk-breath 3.6s ease-in-out infinite;
+}
+.jk-live .jk-lids ellipse {
+  transform-box: fill-box;
+  transform-origin: center top;
+  transform: scaleY(0);
+  animation: jk-blink 4.6s infinite;
+}
+.jk-live .jk-ear-l,
+.jk-live .jk-ear-r {
+  transform-box: view-box;
+  animation: jk-ear 7s ease-in-out infinite;
+}
+.jk-live .jk-ear-l {
+  transform-origin: 140px 92px;
+}
+.jk-live .jk-ear-r {
+  transform-origin: 260px 92px;
+  animation-delay: -3.4s;
+}
+.jk-live .jk-flap {
+  transform-box: view-box;
+  transform-origin: 140px 236px;
+  animation: jk-sway 4.2s ease-in-out infinite;
+}
+.jk-arm {
+  transform-box: view-box;
+  transform-origin: 282px 246px;
+}
+.jk .jk-lids ellipse {
+  transform: scaleY(0);
+}
+.jk-eyes-happy,
+.jk-mouth-happy,
+.jk-tongue {
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.jk-eyes-open,
+.jk-mouth {
+  transition: opacity 0.25s;
+}
+.jk-blush {
+  opacity: 0.22;
+  transition: opacity 0.3s;
+}
+.jk[data-happy='true'] .jk-eyes-open,
+.jk[data-happy='true'] .jk-mouth {
+  opacity: 0;
+}
+.jk[data-happy='true'] .jk-eyes-happy,
+.jk[data-happy='true'] .jk-mouth-happy,
+.jk[data-happy='true'] .jk-tongue {
+  opacity: 1;
+}
+.jk[data-happy='true'] .jk-blush {
+  opacity: 0.55;
+}
+.jk-live[data-happy='true'] .jk-arm {
+  animation: jk-wave 2.2s ease-in-out infinite;
+}
+.jk-twinkle {
+  animation: twinkle 3.2s ease-in-out infinite;
+}
+@keyframes jk-breath {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.012, 1.024);
+  }
+}
+@keyframes jk-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(0);
+  }
+  95% {
+    transform: scaleY(1);
+  }
+}
+@keyframes jk-ear {
+  0%,
+  86%,
+  100% {
+    transform: rotate(0deg);
+  }
+  89% {
+    transform: rotate(-11deg);
+  }
+  93% {
+    transform: rotate(5deg);
+  }
+}
+@keyframes jk-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes jk-wave {
+  0% {
+    transform: rotate(0deg);
+  }
+  16% {
+    transform: rotate(-148deg);
+  }
+  30% {
+    transform: rotate(-122deg);
+  }
+  44% {
+    transform: rotate(-150deg);
+  }
+  58% {
+    transform: rotate(-124deg);
+  }
+  72% {
+    transform: rotate(-146deg);
+  }
+  88%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Casas ilustradas del entorno: tres cuadros de puerta apilados */
+/* en la capa de componentes para que utilidades como «absolute» la puedan sobrescribir */
+@layer components {
+  .house-sprite {
+    position: relative;
+    display: block;
+    aspect-ratio: 1 / 0.86;
+  }
+}
+.house-sprite .hs-f {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+}
+.house-sprite .hs-1,
+.house-sprite .hs-2 {
+  opacity: 0;
+}
+.house-sprite .hs-shadow {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -2%;
+  height: 12%;
+  border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, rgb(20 18 40 / 0.45), transparent 72%);
+}
+.house-sprite .hs-spark {
+  position: absolute;
+  bottom: 30%;
+  width: 9px;
+  height: 9px;
+  opacity: 0;
+  filter: drop-shadow(0 0 4px #ffd27a);
+}
+.house-sprite .hs-reflect {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  width: 100%;
+  transform: scaleY(-1);
+  opacity: 0.22;
+  filter: blur(1.5px);
+  -webkit-mask-image: linear-gradient(0deg, transparent 50%, #000);
+  mask-image: linear-gradient(0deg, transparent 50%, #000);
+  object-fit: contain;
+  object-position: center top;
+}
+@keyframes hs-closed {
+  0%,
+  30% {
+    opacity: 1;
+  }
+  31%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hs-mid {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  31%,
+  70% {
+    opacity: 1;
+  }
+  71%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hs-open {
+  0%,
+  70% {
+    opacity: 0;
+  }
+  71%,
+  100% {
+    opacity: 1;
+  }
+}
+.house-hover:hover .house-sprite .hs-0,
+.house-hover:focus-visible .house-sprite .hs-0 {
+  animation: hs-closed 300ms linear forwards;
+}
+.house-hover:hover .house-sprite .hs-1,
+.house-hover:focus-visible .house-sprite .hs-1 {
+  animation: hs-mid 300ms linear forwards;
+}
+.house-hover:hover .house-sprite .hs-2,
+.house-hover:focus-visible .house-sprite .hs-2 {
+  animation: hs-open 300ms linear forwards;
+}
+.house-hover:hover .house-sprite .hs-spark,
+.house-hover:focus-visible .house-sprite .hs-spark {
+  animation: spark-up 1.4s 0.3s ease-out infinite;
+}
+.story-stage .house-sprite .hs-0 {
+  opacity: clamp(0, calc((0.6 - var(--lp, 0.5)) * 20), 1);
+}
+.story-stage .house-sprite .hs-1 {
+  opacity: calc(clamp(0, calc((var(--lp, 0.5) - 0.55) * 20), 1) * clamp(0, calc((0.78 - var(--lp, 0.5)) * 20), 1));
+}
+.story-stage .house-sprite .hs-2 {
+  opacity: clamp(0, calc((var(--lp, 0.5) - 0.73) * 20), 1);
+}
+
+/* En el recorrido fijo del inicio, las puertas se abren solas a medida que avanzas en el capítulo (--lp). */
+.story-stage .house2d .door {
+  transform: perspective(160px) rotateY(clamp(-70deg, calc((0.5 - var(--lp, 0.5)) * 220deg), 0deg));
+  transition: none;
+}
+.story-stage .house2d .doorway {
+  opacity: clamp(0, calc((var(--lp, 0.5) - 0.5) * 5), 1);
+}
+@keyframes spark-up {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-34px) scale(1.2);
+  }
+}
+
+/* Chat */
+.chat-panel {
+  color: var(--color-ink);
+  background: rgb(251 250 255 / 0.82);
+  border: 1px solid rgb(255 255 255 / 0.9);
+  backdrop-filter: blur(22px) saturate(1.1);
+  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  box-shadow: 0 40px 80px -40px rgb(30 30 80 / 0.55);
+}
+.chat-panel::before {
+  content: '';
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgb(201 162 74 / 0.85), transparent);
+}
+.msg {
+  max-width: 82%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  animation: rise-in 420ms var(--ease-star) both;
+}
+.msg-bot {
+  align-self: flex-start;
+  color: var(--color-ink);
+  background: #fff;
+  border: 1px solid rgb(28 26 51 / 0.08);
+  box-shadow: 0 4px 14px -8px rgb(30 30 80 / 0.25);
+  border-bottom-left-radius: 5px;
+}
+.msg-me {
+  align-self: flex-end;
+  background: #f6ebcf;
+  border: 1px solid #e5d29e;
+  color: #3d2f0c;
+  border-bottom-right-radius: 5px;
+}
+
+/* Texto gigante que cruza detrás de cada capítulo (se desplaza con --lp, el avance dentro del capítulo) */
+.giant {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  z-index: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  font: 900 clamp(90px, 16vw, 250px) / 1 var(--font-display);
+  letter-spacing: -0.04em;
+  color: rgb(255 255 255 / 0.06);
+  -webkit-text-stroke: 1.5px rgb(255 255 255 / 0.32);
+  transform: translate(calc(-50% + (0.5 - var(--lp, 0.5)) * 46vw), -50%);
+}
+
+/* Paneles del recorrido del inicio */
+.story-panel {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  align-items: center;
+  /* las piezas entran desde los costados: sin esto aparece scroll horizontal en móvil */
+  overflow-x: clip;
+}
+[data-reveal] {
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .float-y,
+  .flow-card,
+  .sky-img,
+  .sky-fog,
+  .pallay,
+  .msg,
+  .page-in {
+    animation: none !important;
+  }
+  .star-trans {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .btn:hover {
+    transform: none;
+  }
+}
