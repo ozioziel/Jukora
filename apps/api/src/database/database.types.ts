@@ -150,9 +150,11 @@ export interface Listings {
   origin_country: string;
   payment_terms: Generated<string>;
   photos: Generated<Json>;
+  pickup_address: Generated<string>;
   price: Numeric | null;
   quote_only: Generated<boolean>;
   search_doc: Generated<string | null>;
+  shipping_cost: Generated<Numeric>;
   ships_to: Generated<string[]>;
   specs: Generated<Json>;
   status: Generated<string>;
@@ -189,6 +191,7 @@ export interface Orders {
   created_at: Generated<Timestamp>;
   currency: string;
   delivery: Generated<Json>;
+  fulfillment: Generated<string>;
   id: Generated<string>;
   is_demo: Generated<boolean>;
   listing_id: string | null;
@@ -199,6 +202,7 @@ export interface Orders {
   quantity: number;
   quote_id: string | null;
   requirement_id: string | null;
+  shipping: Generated<Numeric>;
   status: Generated<string>;
   title: string;
   unit: Generated<string>;
