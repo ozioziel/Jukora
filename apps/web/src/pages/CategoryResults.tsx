@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { DemoBadge, EmptyState, ErrorNote, Money, Rating, TrustLabel } from '@/components/ui';
-import { BuyDialog, RfqDialog } from '@/features/procurement/RequestDialogs';
+import { BuyListingDialog, RfqDialog } from '@/features/procurement/RequestDialogs';
 import { ResourceIcon } from '@/features/resources/ResourceIcon';
 import { api } from '@/lib/api';
 import type { ProjectDetail, RankedCandidate, SearchRun } from '@/lib/types';
@@ -181,13 +181,13 @@ export default function CategoryResults() {
         />
       )}
       {buyFor && buyFor.price && buyFor.listingId && (
-        <BuyDialog
-          open
+        <BuyListingDialog
           onClose={() => setBuyFor(null)}
-          listing={{ id: buyFor.listingId, title: buyFor.title, price: buyFor.price, minQty: 1, supplierName: buyFor.supplierName ?? '' }}
+          listingId={buyFor.listingId}
           projectId={run.data?.projectId ?? undefined}
           requirementId={requirement?.id}
           defaultQuantity={resource?.quantity ?? 1}
+          defaultCity={project.data?.city ?? ''}
         />
       )}
     </div>

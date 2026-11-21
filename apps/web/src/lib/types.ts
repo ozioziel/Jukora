@@ -97,6 +97,10 @@ export interface Listing {
   origin: { country: string; city: string | null };
   shipsTo: string[];
   leadTimeDays: number | null;
+  /** Costo de envío por pedido que fija el proveedor (el envío lo hace él). */
+  shipping: { amount: string; currency: string };
+  /** Retiro en local: ciudad (y la dirección solo en la vista del propio proveedor). */
+  pickup: { city: string | null; address?: string } | null;
   warranty: string;
   isDemo: boolean;
   status: string;
@@ -135,6 +139,17 @@ export interface EscrowView {
   txs: { id: string; action: string; status: string; tx_hash: string | null; created_at: string }[];
 }
 
+export interface OrderDelivery {
+  fulfillment?: 'delivery' | 'pickup';
+  country?: string;
+  region?: string;
+  city?: string | null;
+  address?: string;
+  reference?: string;
+  phone?: string;
+  pickup?: { city: string | null; address?: string };
+}
+
 export interface OrderDetail {
   id: string;
   role: 'buyer' | 'supplier' | 'arbiter';
@@ -147,6 +162,11 @@ export interface OrderDetail {
   status: string;
   isDemo: boolean;
   projectId: string | null;
+  fulfillment: 'delivery' | 'pickup';
+  shipping: string;
+  /** Datos de entrega privados; null si esta parte aún no puede verlos (proveedor sin pago financiado). */
+  delivery: OrderDelivery | null;
+  deliveryHidden: boolean;
   supplier: { id: string; name: string; trust: string; isDemo: boolean };
   escrow: EscrowView | null;
   escrowConfig: {

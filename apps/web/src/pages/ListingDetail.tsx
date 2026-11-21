@@ -73,6 +73,18 @@ export default function ListingDetail() {
               <dd>{l.shipsTo.join(', ')}</dd>
             </div>
             <div className="rounded-xl border border-line-soft px-3 py-2">
+              <dt className="text-xs text-muted">{t('delivery.shippingBySupplier')}</dt>
+              <dd>
+                <Money amount={l.shipping.amount} currency={l.shipping.currency} />
+              </dd>
+            </div>
+            {l.pickup && (
+              <div className="rounded-xl border border-line-soft px-3 py-2">
+                <dt className="text-xs text-muted">{t('delivery.pickupTitle')}</dt>
+                <dd>{t('delivery.pickupAvailable', { city: l.pickup.city ?? '—' })}</dd>
+              </div>
+            )}
+            <div className="rounded-xl border border-line-soft px-3 py-2">
               <dt className="text-xs text-muted">{t('results.sortTime')}</dt>
               <dd>{l.leadTimeDays === null ? t('results.leadUnknown') : t('results.leadTime', { count: l.leadTimeDays })}</dd>
             </div>
@@ -94,7 +106,17 @@ export default function ListingDetail() {
         <BuyDialog
           open
           onClose={() => setBuy(false)}
-          listing={{ id: l.id, title: l.title, price: l.price, minQty: l.minQty, supplierName: l.supplier.name }}
+          listing={{
+            id: l.id,
+            title: l.title,
+            price: l.price,
+            minQty: l.minQty,
+            supplierName: l.supplier.name,
+            shipping: l.shipping,
+            pickup: l.pickup,
+            shipsTo: l.shipsTo,
+            originCountry: l.origin.country,
+          }}
         />
       )}
       {rfq && <RfqDialog open onClose={() => setRfq(false)} title={l.title} listingId={l.id} defaultQuantity={l.minQty} />}

@@ -32,7 +32,15 @@ test('flujo de búsqueda inteligente y pedido pendiente de pago', async ({ page 
   await expect(page.getByRole('heading', { name: 'Parrillas' })).toBeVisible();
   const card = page.locator('li', { hasText: 'Parrilla a gas de 4 quemadores' });
   await card.getByRole('button', { name: 'Solicitar', exact: true }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Continuar' }).click();
+  // Jukora es pasarela: el proveedor envía; el comprador da dirección y teléfono (datos de prueba).
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+  await dialog.getByLabel('Ciudad').fill('La Paz');
+  await dialog.getByLabel('Teléfono de contacto').fill('+591 71234567');
+  await dialog.getByLabel('Departamento').fill('La Paz');
+  await dialog.getByLabel('Dirección', { exact: true }).fill('Av. Arce 2000, Sopocachi (DATO DE PRUEBA)');
+  await expect(dialog.getByText('Envío', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Continuar' }).click();
 
   await expect(page).toHaveURL(/\/pedidos\//);
   await expect(page.getByText('Pendiente de pago').first()).toBeVisible();
