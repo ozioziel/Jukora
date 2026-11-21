@@ -12,6 +12,16 @@ const SIGNATURES: { mime: string; ext: string; test: (b: Buffer) => boolean }[] 
 ];
 
 /**
+ * Cabeceras para Supabase con la clave de servicio.
+ * - Clave heredada `service_role` (un JWT, empieza por «eyJ»): va en `apikey` y en `Authorization: Bearer`.
+ * - Clave secreta nueva (`sb_secret_…`): no es un JWT; Supabase pide enviarla solo en `apikey`
+ *   (en `Authorization` se intentaría validar como JWT y la petición se rechazaría).
+ */
+export function supabaseServiceHeaders(key: string): Record<string, string> {
+  return key.startsWith('eyJ') ? { apikey: key, authorization: `Bearer ${key}` } : { apikey: key };
+}
+
+/**
  * Supabase Storage desde la API con la clave de servicio (nunca en el navegador).
  * El tipo se decide por los bytes del archivo, no por lo que declara el cliente.
  */
@@ -27,7 +37,7 @@ export class StorageService {
 
   private headers(extra: Record<string, string> = {}) {
     if (!this.env.SUPABASE_SERVICE_ROLE_KEY) throw unavailable('storage_not_configured');
-    return { authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE_KEY}`, apikey: this.env.SUPABASE_SERVICE_ROLE_KEY, ...extra };
+    return { ...supabaseServiceHeaders(this.env.SUPABASE_SERVICE_ROLE_KEY), ...extra };
   }
 
   async upload(bucket: 'evidence' | 'listing-photos', prefix: string, buffer: Buffer, allowed: string[], maxBytes: number) {
