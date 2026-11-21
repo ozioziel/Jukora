@@ -55,7 +55,8 @@ export const EnvSchema = z
 
     AI_PROVIDER: z.enum(['groq', 'ollama', 'demo']).default('demo'),
     GROQ_API_KEY: optional,
-    GROQ_MODEL: z.string().default('llama-3.1-8b-instant'),
+    // llama-3.1-8b-instant se retiró el 16/08/2026; Groq recomienda openai/gpt-oss-20b como reemplazo.
+    GROQ_MODEL: z.string().default('openai/gpt-oss-20b'),
     OLLAMA_URL: optional,
     OLLAMA_MODEL: z.string().default('qwen2.5:3b-instruct'),
 

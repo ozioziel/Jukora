@@ -55,13 +55,29 @@ export class GroqPlanner implements ResourcePlanner {
     return withRepair(async (messages) => {
       const data = (await postJson(
         'https://api.groq.com/openai/v1/chat/completions',
-        { model: this.model, messages, temperature: 0.2, max_tokens: 1800, response_format: { type: 'json_object' } },
+        groqBody(this.model, messages),
         { authorization: `Bearer ${this.apiKey}` },
         signal,
       )) as { choices?: { message?: { content?: string } }[] };
       return data.choices?.[0]?.message?.content ?? '';
     }, req);
   }
+}
+
+/**
+ * Cuerpo de la petición a Groq. Los modelos gpt-oss razonan antes de responder y ese razonamiento
+ * cuenta dentro del límite de salida: se pide razonamiento bajo y más margen para que el JSON no se corte.
+ */
+export function groqBody(model: string, messages: { role: string; content: string }[]) {
+  const reasoning = model.startsWith('openai/gpt-oss');
+  return {
+    model,
+    messages,
+    temperature: 0.2,
+    max_tokens: reasoning ? 4000 : 1800,
+    response_format: { type: 'json_object' },
+    ...(reasoning ? { reasoning_effort: 'low' } : {}),
+  };
 }
 
 /** Ollama privado (VPS). Nunca expuesto a Internet: la API lo llama por red interna. */
