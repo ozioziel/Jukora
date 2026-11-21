@@ -1,18 +1,24 @@
-# Despliegue CONTROLADO por el responsable: solo se ejecuta a mano (workflow_dispatch) y requiere
-# la aprobación del Environment «production» configurado en GitHub. No escribe en el repositorio.
-# El VPS es Oracle Cloud ARM64 (aarch64): las imágenes se publican para linux/arm64 por defecto.
+# Despliegue continuo al VPS (Oracle Cloud ARM64, aarch64).
+# - Automático: cuando el CI termina EN VERDE sobre un push a main (es decir, al mergear un PR).
+#   Imagen etiquetada `sha-<commit>`; las migraciones pendientes de Supabase se aplican solas.
+# - Manual (Run workflow): para volver a desplegar o publicar una etiqueta concreta (ej. v0.1.0).
+# No escribe en el repositorio. Los secretos viven en el Environment «production» de GitHub.
 name: CD
 
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
         description: 'Versión de imagen (ej. v0.1.0)'
         required: true
       run_migrations:
-        description: 'Aplicar migraciones de Supabase antes de desplegar'
+        description: 'Aplicar migraciones pendientes de Supabase antes de desplegar'
         type: boolean
-        default: false
+        default: true
       platforms:
         description: 'Arquitecturas de las imágenes (el VPS es linux/arm64)'
         default: 'linux/arm64'
@@ -21,13 +27,60 @@ permissions:
   contents: read
   packages: write
 
+# Un despliegue a la vez; el siguiente espera en cola (no cancela uno a medias).
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
 jobs:
+  prepare:
+    # Solo pushes reales a main de este repositorio con el CI en verde (nunca PR ni forks), o ejecución manual.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.v.outputs.sha }}
+      tag: ${{ steps.v.outputs.tag }}
+      migrate: ${{ steps.v.outputs.migrate }}
+      platforms: ${{ steps.v.outputs.platforms }}
+    steps:
+      - id: v
+        env:
+          EVENT: ${{ github.event_name }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          IN_TAG: ${{ inputs.tag }}
+          IN_MIGRATE: ${{ inputs.run_migrations }}
+          IN_PLATFORMS: ${{ inputs.platforms }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            sha="$GITHUB_SHA"; tag="$IN_TAG"; migrate="$IN_MIGRATE"; platforms="$IN_PLATFORMS"
+          else
+            sha="$RUN_SHA"; tag="sha-${RUN_SHA:0:7}"; migrate="true"; platforms="linux/arm64"
+          fi
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Commit inválido: $sha"; exit 1; }
+          [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || { echo "Etiqueta inválida: $tag"; exit 1; }
+          [[ "$platforms" =~ ^linux/(amd64|arm64)(,linux/(amd64|arm64))?$ ]] || { echo "Plataformas inválidas: $platforms"; exit 1; }
+          {
+            echo "sha=$sha"
+            echo "tag=$tag"
+            echo "migrate=$migrate"
+            echo "platforms=$platforms"
+          } >> "$GITHUB_OUTPUT"
+          echo "Desplegando $tag (commit $sha) · migraciones: $migrate · $platforms" >> "$GITHUB_STEP_SUMMARY"
+
   images:
+    needs: prepare
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
       # QEMU: solo las etapas que dependen del procesador (instalación de dependencias de
       # producción de la API) se ejecutan emuladas; TypeScript y Vite compilan nativo.
       - uses: docker/setup-qemu-action@v3
@@ -42,9 +95,9 @@ jobs:
         with:
           context: .
           file: deploy/api.Dockerfile
-          platforms: ${{ inputs.platforms }}
+          platforms: ${{ needs.prepare.outputs.platforms }}
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/jucumari-api:${{ inputs.tag }}
+          tags: ghcr.io/${{ github.repository_owner }}/jucumari-api:${{ needs.prepare.outputs.tag }}
           cache-from: type=gha,scope=cd-api
           cache-to: type=gha,mode=max,scope=cd-api
       - name: Web
@@ -52,9 +105,9 @@ jobs:
         with:
           context: .
           file: deploy/web.Dockerfile
-          platforms: ${{ inputs.platforms }}
+          platforms: ${{ needs.prepare.outputs.platforms }}
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/jucumari-web:${{ inputs.tag }}
+          tags: ghcr.io/${{ github.repository_owner }}/jucumari-web:${{ needs.prepare.outputs.tag }}
           cache-from: type=gha,scope=cd-web
           cache-to: type=gha,mode=max,scope=cd-web
           build-args: |
@@ -64,23 +117,27 @@ jobs:
             VITE_POLLAR_PUBLISHABLE_KEY=${{ vars.VITE_POLLAR_PUBLISHABLE_KEY }}
 
   migrations:
-    if: ${{ inputs.run_migrations }}
-    needs: images
+    needs: [prepare, images]
+    if: ${{ needs.prepare.outputs.migrate == 'true' }}
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - name: Supabase db push (migraciones explícitas, nunca reset)
+      # Solo aplica las migraciones que aún no están en la base (si no hay ninguna, no hace nada).
+      # Nunca `reset`. Las migraciones deben ser aditivas (ver docs/operacion-y-rollback.md).
+      - name: Supabase db push
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: npx --yes supabase@2.119.0 db push --db-url "$SUPABASE_DB_URL"
+        run: npx --yes supabase@2.119.0 db push --db-url "$SUPABASE_DB_URL" --yes
 
   deploy:
-    needs: [images, migrations]
-    if: ${{ always() && needs.images.result == 'success' && (needs.migrations.result == 'success' || needs.migrations.result == 'skipped') }}
+    needs: [prepare, images, migrations]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.images.result == 'success' && (needs.migrations.result == 'success' || needs.migrations.result == 'skipped') }}
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -90,7 +147,7 @@ jobs:
           HOST: ${{ secrets.VPS_HOST }}
           USER: ${{ secrets.VPS_USER }}
           KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
-          TAG: ${{ inputs.tag }}
+          TAG: ${{ needs.prepare.outputs.tag }}
           OWNER: ${{ github.repository_owner }}
           # Carpeta y puerto local de la app en el VPS (variables del Environment; con valores por defecto).
           APP_DIR: ${{ vars.VPS_APP_DIR || '/srv/penguinlab/apps/jukora' }}
@@ -103,4 +160,6 @@ jobs:
             echo \"$TAG\" > .previous_tag.new && (cat .current_tag 2>/dev/null || echo none) > .previous_tag && mv .previous_tag.new .current_tag && \
             GHCR_OWNER=$OWNER IMAGE_TAG=$TAG WEB_PORT=$PORT docker compose -f docker-compose.prod.yml pull && \
             GHCR_OWNER=$OWNER IMAGE_TAG=$TAG WEB_PORT=$PORT docker compose -f docker-compose.prod.yml up -d && \
-            sleep 20 && curl -fsS http://127.0.0.1:$PORT/api/health/ready"
+            { for i in \$(seq 1 24); do curl -fsS http://127.0.0.1:$PORT/api/health/ready && exit 0; sleep 5; done; \
+              echo 'La API no respondió en 2 minutos'; exit 1; }"
+          echo "Desplegado $TAG" >> "$GITHUB_STEP_SUMMARY"

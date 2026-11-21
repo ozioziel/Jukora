@@ -24,7 +24,7 @@ Lo que **solo tú** puedes hacer: crear cuentas, generar claves, aprobar desplie
 | 8 | Proyecto **Supabase** remoto (Free) | supabase.com | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | `docs/supabase.md` |
 | 9 | Configurar GitHub Environment `production` y secretos | GitHub → Settings | ver `docs/ci-cd.md` | CI verde en un PR |
 | 10 | Preparar el VPS (carpeta, `.env.production`, proxy, TLS) | VPS Oracle | ver `docs/despliegue-vps.md` | `curl …/api/health/ready` |
-| 11 | Ejecutar CD (manual, con aprobación) | GitHub → Actions → CD | etiqueta `v0.1.0` | Web accesible por https |
+| 11 | Mergear un PR en `main` (el CD despliega solo si el CI pasa) | GitHub → Pull requests | — | Web accesible por https |
 | 12 | (Opcional) Ollama en el VPS como respaldo | VPS | `OLLAMA_URL` | `docs/despliegue-vps.md` §5 |
 
 Tras cada clave nueva: reiniciar la API (`npm run dev` o `docker compose … up -d`). La API valida la configuración al arrancar y explica qué falta.
