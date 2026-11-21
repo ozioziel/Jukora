@@ -101,7 +101,8 @@ jukora.duckdns.org {
    Esa misma cadena sirve para `DATABASE_URL` (VPS) y para el secreto `SUPABASE_DB_URL` (GitHub).
 3. **Project Settings → API keys**: copia la clave secreta (`service_role` / `sb_secret_…`) → `SUPABASE_SERVICE_ROLE_KEY`.
    La URL del proyecto (`https://<ref>.supabase.co`) → `SUPABASE_URL`.
-4. Las tablas, RLS y buckets los crea el CD con «aplicar migraciones» (paso 8).
+4. Las tablas, RLS y buckets los crea el CD al desplegar (aplica las migraciones pendientes, paso 9).
+   Elige la región de Supabase más cercana al VPS (VPS en Santiago → São Paulo): cada consulta cruza esa distancia.
 5. Datos de demostración (opcional, ficticios y etiquetados DEMO): después del primer despliegue,
    en Supabase → SQL Editor, pega el contenido de `supabase/seed.sql` y ejecútalo.
 
@@ -157,7 +158,9 @@ docker login ghcr.io -u <tu-usuario-de-github>      # pega el token cuando lo pi
 
 Settings del repositorio → **Environments → New environment** → `production`:
 
-- **Required reviewers**: tú (nada se despliega sin tu aprobación).
+- **Sin «Required reviewers»**: el CD despliega solo cada vez que el CI pasa en `main`.
+- **Deployment branches and tags** → *Selected branches and tags* → `main` (los secretos solo
+  se usan desde `main`).
 - **Environment secrets**: `VPS_HOST` (IP o `jukora.duckdns.org`), `VPS_USER` (`deploy`),
   `VPS_SSH_KEY` (llave privada del paso 2), `VPS_KNOWN_HOSTS` (salida de `ssh-keyscan`),
   `SUPABASE_DB_URL` (cadena del *Session pooler*).
@@ -166,20 +169,26 @@ Settings del repositorio → **Environments → New environment** → `productio
 
 ## 9. Primer despliegue
 
+Es automático: al mergear un PR en `main`, el CI corre y, si sale en verde, el CD construye las
+imágenes, aplica las migraciones pendientes y despliega (etiqueta `sha-<commit>`). El primer build
+tarda más (se llena la caché). Al terminar, el workflow comprueba `/api/health/ready`. Abre tu dominio.
+
+Para publicar una versión con nombre (opcional):
+
 ```bash
 git switch main && git pull
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-GitHub → **Actions → CD → Run workflow**: `tag = v0.1.0`, marca **Aplicar migraciones**, deja
-`platforms = linux/arm64` y aprueba el entorno. El primer build tarda más (se llena la caché).
-Al terminar, el workflow comprueba `/api/health/ready`. Abre `https://jukora.duckdns.org`.
+y en GitHub → **Actions → CD → Run workflow**: `tag = v0.1.0` (rama `main`).
 
 Comprobación manual en el VPS:
 
 ```bash
-cd /srv/penguinlab/apps/jukora && docker compose -f docker-compose.prod.yml ps
+cd /srv/penguinlab/apps/jukora
+# El Compose exige GHCR_OWNER e IMAGE_TAG (el CD los pasa en cada despliegue; a mano hay que darlos).
+GHCR_OWNER=<owner> IMAGE_TAG=$(cat .current_tag) docker compose -f docker-compose.prod.yml ps
 curl -fsS http://127.0.0.1:6704/api/health/ready
 ```
 

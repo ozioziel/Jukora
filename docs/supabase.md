@@ -16,13 +16,12 @@ Funciones: `reserve_search_quota` (reserva atómica e idempotente, bloqueo por u
 ## Remoto (lo hace el responsable)
 
 1. Crear un proyecto en supabase.com (plan Free). Anotar la región.
-2. Project Settings → Database → cadena de conexión **directa** (puerto 5432) → guardarla como `DATABASE_URL` en el `.env.production` del VPS y como secreto `SUPABASE_DB_URL` en GitHub (environment `production`).
-3. Project Settings → API keys → clave secreta / service_role → `SUPABASE_SERVICE_ROLE_KEY` (solo servidor). La URL del proyecto → `SUPABASE_URL`.
-4. Aplicar migraciones (nunca `db reset` en remoto):
+2. **Connect → Direct → Session pooler** (IPv4, puerto 5432; la conexión directa es solo IPv6) → guardarla como `DATABASE_URL` en el `.env.production` del VPS y como secreto `SUPABASE_DB_URL` en GitHub (environment `production`).
+3. Project Settings → API Keys → **Secret key** (`sb_secret_…`; la `service_role` heredada también sirve hasta que Supabase la retire) → `SUPABASE_SERVICE_ROLE_KEY` (solo servidor). La URL del proyecto (`https://<ref>.supabase.co`, en Data API) → `SUPABASE_URL`.
+4. Las migraciones pendientes las aplica el CD en cada despliegue (nunca `db reset` en remoto). A mano:
    ```bash
    npx supabase@2.119.0 db push --db-url "$SUPABASE_DB_URL"
    ```
-   o con el workflow CD marcando `run_migrations`.
 5. **No** cargar `seed.sql` en producción (son datos DEMO).
 6. El plan Free pausa el proyecto tras ~1 semana sin actividad: reactivarlo desde el panel si ocurre.
 
