@@ -1,5 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { canTransitionOrder, computePlatformFee, fromUnits, type OrderStatus, toUnits } from '@jucumari/shared';
+import {
+  addMoney,
+  canTransitionOrder,
+  computePlatformFee,
+  type DeliveryInput,
+  type DeliveryRecord,
+  deliveryFor,
+  fromUnits,
+  type OrderStatus,
+  sameCity,
+  toUnits,
+} from '@jucumari/shared';
 import type { AuthUser } from '../auth/auth.types';
 import { AccessService } from '../common/access.service';
 import { badRequest, conflict, forbidden, notFound } from '../common/errors';
@@ -18,10 +29,14 @@ export class OrdersService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  /** Compra directa de un artículo con precio, stock y proveedor habilitado. Si no, corresponde cotizar. */
+  /**
+   * Compra directa de un artículo con precio, stock y proveedor habilitado. Si no, corresponde cotizar.
+   * Jukora es pasarela: el envío lo hace el proveedor al costo que fijó en el artículo, o el comprador
+   * retira en el local (solo si está en la misma ciudad y el proveedor lo ofrece).
+   */
   async fromListing(
     user: AuthUser,
-    input: { listingId: string; quantity: number; projectId?: string; requirementId?: string; city?: string },
+    input: { listingId: string; quantity: number; projectId?: string; requirementId?: string; delivery: DeliveryInput },
   ) {
     const l = await this.db
       .selectFrom('listings as l')
@@ -38,6 +53,9 @@ export class OrdersService {
         'l.org_id',
         'l.ships_to',
         'l.origin_country',
+        'l.origin_city',
+        'l.shipping_cost',
+        'l.pickup_address',
         'o.trust',
         'o.payout_address',
         'l.is_demo',
@@ -60,7 +78,19 @@ export class OrdersService {
         .executeTakeFirst();
       if (!p) throw notFound('project');
     }
-    const amount = fromUnits(toUnits(l.price) * BigInt(input.quantity));
+    const d = input.delivery;
+    let record: DeliveryRecord;
+    if (d.fulfillment === 'pickup') {
+      if (!l.pickup_address) throw conflict('pickup_not_offered');
+      if (!sameCity(d.city, l.origin_city)) throw conflict('pickup_other_city', { city: l.origin_city });
+      record = { fulfillment: 'pickup', city: d.city, phone: d.phone, pickup: { address: l.pickup_address, city: l.origin_city } };
+    } else {
+      if (d.country !== l.origin_country && !l.ships_to.includes(d.country)) throw conflict('destination_not_served');
+      const { fulfillment: _f, ...address } = d;
+      record = { fulfillment: 'delivery', ...address };
+    }
+    const shipping = d.fulfillment === 'delivery' ? fromUnits(toUnits(l.shipping_cost)) : '0';
+    const amount = addMoney(fromUnits(toUnits(l.price) * BigInt(input.quantity)), shipping);
     const fee = computePlatformFee(amount, { basisPoints: this.env.PLATFORM_FEE_BPS, minimum: this.env.PLATFORM_FEE_MIN });
     const o = await this.db
       .insertInto('orders')
@@ -77,7 +107,9 @@ export class OrdersService {
         currency: l.currency,
         platform_fee: fee.fee,
         platform_fee_percent: String(fee.percent),
-        delivery: JSON.stringify({ city: input.city ?? null }),
+        fulfillment: d.fulfillment,
+        shipping,
+        delivery: JSON.stringify(record),
         is_demo: l.is_demo,
       })
       .returning(['id'])
@@ -124,6 +156,9 @@ export class OrdersService {
     const shipments = await this.db.selectFrom('shipments').selectAll().where('order_id', '=', id).orderBy('created_at').execute();
     const dispute = await this.db.selectFrom('disputes').select(['id', 'status', 'reason']).where('order_id', '=', id).executeTakeFirst();
     const review = await this.db.selectFrom('reviews').select(['supplier_rating']).where('order_id', '=', id).executeTakeFirst();
+    // Datos de entrega: el proveedor los ve recién con el pago protegido financiado.
+    const funded = !['pending_payment', 'cancelled'].includes(order.status);
+    const delivery = deliveryFor(role, funded, order.delivery as Record<string, unknown>);
     return {
       id: order.id,
       role,
@@ -136,8 +171,11 @@ export class OrdersService {
       status: order.status,
       isDemo: order.is_demo,
       projectId: role === 'buyer' ? order.project_id : null,
-      // La dirección de entrega solo la ven comprador, proveedor del pedido y árbitro asignado.
-      delivery: order.delivery,
+      fulfillment: order.fulfillment,
+      shipping: order.shipping,
+      // La dirección de entrega solo la ven comprador, árbitro asignado y, con el pago financiado, el proveedor.
+      delivery: delivery.data,
+      deliveryHidden: !delivery.visible,
       supplier: { id: org.id, name: org.name, trust: org.trust, isDemo: org.is_demo },
       escrow: await this.escrow.forOrder(id),
       escrowConfig: this.escrow.status(),
@@ -177,16 +215,20 @@ export class OrdersService {
     const escrow = await this.db.selectFrom('escrows').select('status').where('order_id', '=', id).executeTakeFirst();
     if (!escrow || escrow.status !== 'funded') throw conflict('escrow_not_funded'); // sin financiación confirmada no se indica envío
     if (!canTransitionOrder(order.status as OrderStatus, input.status)) throw conflict('invalid_transition');
+    if (input.status === 'shipped' && order.fulfillment === 'pickup') throw conflict('pickup_not_shipped');
     await this.db.updateTable('orders').set({ status: input.status }).where('id', '=', id).execute();
     if (input.status === 'shipped') {
+      // El envío lo hace el proveedor: Jukora solo registra lo que él informa (no lo verifica).
       await this.db
         .insertInto('shipments')
         .values({
           order_id: id,
-          carrier: input.carrier ?? 'Logística DEMO',
+          carrier: input.carrier ?? (order.is_demo ? 'Logística DEMO' : ''),
           tracking: input.tracking ?? '',
-          is_simulated: true,
-          events: JSON.stringify([{ at: new Date().toISOString(), label: 'Enviado (simulación DEMO)' }]),
+          is_simulated: order.is_demo,
+          events: JSON.stringify([
+            { at: new Date().toISOString(), label: order.is_demo ? 'Enviado (simulación DEMO)' : 'Enviado (informado por el proveedor)' },
+          ]),
         })
         .execute();
     }

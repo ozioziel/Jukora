@@ -53,6 +53,11 @@ const ListingSchema = z.object({
   leadTimeDays: z.number().int().min(0).max(3650).nullable().optional(),
   warranty: z.string().trim().max(200).optional(),
   paymentTerms: z.string().trim().max(300).optional(),
+  shippingCost: z
+    .string()
+    .regex(/^\d{1,13}(\.\d{1,7})?$/)
+    .optional(),
+  pickupAddress: z.string().trim().max(200).optional(),
 });
 
 @Controller()

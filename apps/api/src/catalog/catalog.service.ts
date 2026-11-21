@@ -34,6 +34,10 @@ export interface ListingInput {
   leadTimeDays?: number | null;
   warranty?: string;
   paymentTerms?: string;
+  /** Costo de envío por pedido (el envío lo hace el proveedor). */
+  shippingCost?: string;
+  /** Dirección del local para retiro; vacía = no ofrece retiro. */
+  pickupAddress?: string;
 }
 
 const PAGE = 24;
@@ -77,6 +81,8 @@ export class CatalogService {
         'l.origin_city',
         'l.ships_to',
         'l.lead_time_days',
+        'l.shipping_cost',
+        'l.pickup_address',
         'l.warranty',
         'l.payment_terms',
         'l.photos',
@@ -232,7 +238,7 @@ export class CatalogService {
   async myListings(user: AuthUser) {
     const orgId = await this.access.requireOrg(user.id);
     const rows = await this.base().where('l.org_id', '=', orgId).orderBy('l.updated_at', 'desc').execute();
-    return rows.map((r) => this.view(r));
+    return rows.map((r) => this.view(r, true));
   }
 
   async saveListing(user: AuthUser, input: ListingInput, id?: string) {
@@ -256,6 +262,8 @@ export class CatalogService {
       lead_time_days: input.leadTimeDays ?? null,
       warranty: input.warranty ?? '',
       payment_terms: input.paymentTerms ?? '',
+      shipping_cost: input.shippingCost ?? '0',
+      pickup_address: input.pickupAddress ?? '',
     };
     if (id) {
       const r = await this.db
@@ -289,7 +297,8 @@ export class CatalogService {
     return { id, status };
   }
 
-  view(r: Awaited<ReturnType<ReturnType<CatalogService['base']>['executeTakeFirstOrThrow']>>) {
+  /** `own`: vista del propio proveedor (incluye la dirección del local, que el público no ve). */
+  view(r: Awaited<ReturnType<ReturnType<CatalogService['base']>['executeTakeFirstOrThrow']>>, own = false) {
     return {
       id: r.id,
       title: r.title,
@@ -305,6 +314,9 @@ export class CatalogService {
       origin: { country: r.origin_country, city: r.origin_city || null },
       shipsTo: r.ships_to,
       leadTimeDays: r.lead_time_days,
+      shipping: { amount: r.shipping_cost, currency: r.currency },
+      // Retiro: el público solo sabe que existe y en qué ciudad; la dirección se muestra al comprador con el pago financiado.
+      pickup: r.pickup_address ? { city: r.origin_city || null, ...(own ? { address: r.pickup_address } : {}) } : null,
       warranty: r.warranty,
       paymentTerms: r.payment_terms,
       photos: r.photos,

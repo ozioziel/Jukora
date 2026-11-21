@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { DeliveryAddressSchema } from '@jucumari/shared';
 import { z } from 'zod';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators';
@@ -29,6 +30,8 @@ const RfqSchema = z.object({
   shareBudget: z.boolean().optional(),
   budgetMax: decimal.optional(),
 });
+// La cotización ya incluye el envío que calculó el proveedor: el comprador da dirección y teléfono.
+const AcceptSchema = z.object({ delivery: DeliveryAddressSchema });
 const QuoteSchema = z.object({
   description: z.string().trim().max(1000).optional(),
   quantity: z.number().int().positive().max(1_000_000),
@@ -88,8 +91,12 @@ export class ProcurementController {
 
   @Post('quotes/:id/accept')
   @HttpCode(200)
-  accept(@CurrentUser() u: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.acceptQuote(u, id);
+  accept(
+    @CurrentUser() u: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodPipe(AcceptSchema)) body: z.infer<typeof AcceptSchema>,
+  ) {
+    return this.svc.acceptQuote(u, id, body.delivery);
   }
 
   @Post('quotes/:id/reject')
