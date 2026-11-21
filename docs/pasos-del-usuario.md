@@ -32,7 +32,7 @@ Tras cada clave nueva: reiniciar la API (`npm run dev` o `docker compose … up 
 ## Lo que queda bloqueado o simulado (dicho en la interfaz)
 
 - **QR con bolivianos real**: solo existe en mainnet (Pollar → Stereum → puente). En testnet se usa la rampa SIMULADA con QR no pagable.
-- **Logística**: simulada y etiquetada DEMO.
+- **Envíos**: Jukora es pasarela; el envío lo hace el proveedor (costo por artículo o en la cotización, o retiro en local en la misma ciudad). El comprador da dirección y teléfono, visibles para el proveedor solo con el pago protegido financiado. Jukora registra lo que informa el proveedor y no lo verifica; en datos DEMO se etiqueta como simulado.
 - **Árbitro**: cuenta DEMO; no es arbitraje legal.
 - **Catálogo y reseñas**: ficticios, marcados DEMO.
 - **Mainnet**: bloqueado por configuración (`MAINNET_APPROVED` + revisión legal).
