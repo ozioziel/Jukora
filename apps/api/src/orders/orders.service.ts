@@ -178,7 +178,12 @@ export class OrdersService {
       deliveryHidden: !delivery.visible,
       supplier: { id: org.id, name: org.name, trust: org.trust, isDemo: org.is_demo },
       escrow: await this.escrow.forOrder(id),
-      escrowConfig: this.escrow.status(),
+      escrowConfig: this.escrow.configFor(order.escrow_provider),
+      escrowProvider: order.escrow_provider,
+      escrowMode: order.escrow_mode,
+      advanceAmount: order.advance_amount,
+      deliveryDays: order.delivery_days,
+      productUrl: order.product_url,
       shipments: shipments.map((s) => ({
         id: s.id,
         carrier: s.carrier,

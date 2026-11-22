@@ -274,4 +274,40 @@ describe('Explorar, cotización y pedido', () => {
       .send({ listingId: listing.body.id, quantity: 1, delivery: { ...ADDRESS, country: 'PE' } })
       .expect(409);
   });
+  it('enlace de checkout: la importadora lo crea, el comprador lo ve sin cuenta y lo acepta una sola vez', async () => {
+    const buyer = await login();
+    const seller = await login('supplier');
+    await seller.agent.post('/api/supplier/org').send({ name: 'Importadora de prueba', country: 'BO', city: 'La Paz' }).expect(201);
+    // Anticipo por encima del tope de la plataforma: rechazado.
+    await seller.agent
+      .post('/api/links')
+      .send({ title: 'Celular de prueba', price: '100', deliveryDays: 20, mode: 'partial', advance: '90' })
+      .expect(400);
+    const link = await seller.agent
+      .post('/api/links')
+      .send({ title: 'Celular de prueba', price: '100', shipping: '20', deliveryDays: 20, mode: 'full' })
+      .expect(201);
+    expect(link.body.url).toMatch(/\/c\/[A-Za-z0-9_-]{20,}$/);
+
+    // Vista pública: sin wallets ni datos personales; trae el aviso de riesgo con su huella.
+    const view = await request(app.getHttpServer()).get(`/api/checkout/${link.body.token}`).expect(200);
+    expect(view.body).toMatchObject({ total: '120', mode: 'full', status: 'active' });
+    expect(view.body.disclosure.version).toBe('full/v1');
+    expect(JSON.stringify(view.body)).not.toMatch(/payout|address|G[A-Z2-7]{55}/);
+
+    const body = { delivery: ADDRESS, disclosureVersion: view.body.disclosure.version, disclosureHash: view.body.disclosure.hash };
+    // La importadora no puede comprar su propio enlace; un aviso distinto al mostrado se rechaza.
+    await seller.agent.post(`/api/checkout/${link.body.token}/accept`).send(body).expect(403);
+    await buyer.agent
+      .post(`/api/checkout/${link.body.token}/accept`)
+      .send({ ...body, disclosureHash: '0'.repeat(64) })
+      .expect(409);
+    const ok = await buyer.agent.post(`/api/checkout/${link.body.token}/accept`).send(body).expect(200);
+    const order = await buyer.agent.get(`/api/orders/${ok.body.orderId}`).expect(200);
+    expect(order.body).toMatchObject({ amount: '120', shipping: '20', escrowMode: 'full', status: 'pending_payment' });
+    // Un enlace se usa una sola vez.
+    await buyer.agent.post(`/api/checkout/${link.body.token}/accept`).send(body).expect(409);
+    const mine = await seller.agent.get('/api/links/mine').expect(200);
+    expect(mine.body[0]).toMatchObject({ status: 'accepted', orderId: ok.body.orderId });
+  });
 });

@@ -20,7 +20,7 @@ const SupplierUpdate = z.object({
   tracking: z.string().trim().max(80).optional(),
 });
 const Prepare = z.object({
-  action: z.enum(['fund', 'change_status', 'approve', 'dispute']),
+  action: z.enum(['fund', 'change_status', 'approve', 'dispute', 'claim_advance']),
   evidence: z.string().max(200).optional(),
 });
 const Submit = z.object({ signedXdr: z.string().min(50).max(20_000) });

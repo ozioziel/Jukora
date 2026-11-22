@@ -124,6 +124,8 @@ export const NOTIFICATION_KINDS = [
   'refund_confirmed',
   'verification_required',
   'rfq_received',
+  'advance_released',
+  'link_accepted',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

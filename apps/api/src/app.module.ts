@@ -8,6 +8,7 @@ import { DisputesModule } from './disputes/disputes.module';
 import { EscrowModule } from './escrow/escrow.module';
 import { HealthController } from './health/health.controller';
 import { JobsModule } from './jobs/jobs.module';
+import { LinksModule } from './links/links.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -30,6 +31,7 @@ import { VerificationModule } from './verification/verification.module';
     ProcurementModule,
     EscrowModule,
     OrdersModule,
+    LinksModule,
     PaymentsModule,
     VerificationModule,
     DisputesModule,
