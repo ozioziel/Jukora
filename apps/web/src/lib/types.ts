@@ -130,6 +130,10 @@ export interface Quote {
 
 export interface EscrowView {
   id: string;
+  provider: 'trustless_work' | 'soroban';
+  mode: 'full' | 'partial';
+  advanceAmount: string;
+  advanceReleased: string;
   network: string;
   contractId: string | null;
   status: string;
@@ -164,6 +168,12 @@ export interface OrderDetail {
   projectId: string | null;
   fulfillment: 'delivery' | 'pickup';
   shipping: string;
+  /** Motor del escrow: Trustless Work o el contrato Soroban de Montuno. */
+  escrowProvider: 'trustless_work' | 'soroban';
+  escrowMode: 'full' | 'partial';
+  advanceAmount: string;
+  deliveryDays: number | null;
+  productUrl: string;
   /** Datos de entrega privados; null si esta parte aún no puede verlos (proveedor sin pago financiado). */
   delivery: OrderDelivery | null;
   deliveryHidden: boolean;
@@ -171,6 +181,8 @@ export interface OrderDetail {
   escrow: EscrowView | null;
   escrowConfig: {
     enabled: boolean;
+    provider: 'trustless_work' | 'soroban';
+    contractId: string | null;
     network: string;
     asset: { code: string; issuer: string | null; isTestToken: boolean };
     missing: string[];

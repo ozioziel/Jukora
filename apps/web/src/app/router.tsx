@@ -20,6 +20,8 @@ const SupplierHome = lazy(() => import('@/pages/supplier/SupplierHome'));
 const FindBusinesses = lazy(() => import('@/pages/supplier/FindBusinesses'));
 const PublishItem = lazy(() => import('@/pages/supplier/PublishItem'));
 const Arbiter = lazy(() => import('@/pages/Arbiter'));
+const Sell = lazy(() => import('@/pages/Sell'));
+const Checkout = lazy(() => import('@/pages/Checkout'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const s = (el: ReactNode) => <Suspense fallback={<div className="min-h-[60vh]" aria-busy="true" />}>{el}</Suspense>;
@@ -45,6 +47,8 @@ export const router = createBrowserRouter([
       { path: '/proveedor/negocios', element: p(<FindBusinesses />) },
       { path: '/proveedor/publicar', element: p(<PublishItem />) },
       { path: '/arbitro', element: p(<Arbiter />) },
+      { path: '/vender', element: p(<Sell />) },
+      { path: '/c/:token', element: s(<Checkout />) },
       { path: '*', element: s(<NotFound />) },
     ],
   },

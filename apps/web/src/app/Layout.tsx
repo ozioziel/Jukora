@@ -29,11 +29,14 @@ function useNavItems() {
   return supplier
     ? [
         { to: '/proveedor', label: t('nav.supplierHome'), end: true },
-        { to: '/proveedor/negocios', label: t('nav.findBusinesses'), end: false },
+        { to: '/vender', label: t('nav.sell'), end: false },
         { to: '/proveedor/publicar', label: t('nav.publish'), end: false },
+        { to: '/proveedor/negocios', label: t('nav.findBusinesses'), end: false },
       ]
     : [
         { to: '/', label: t('nav.home'), end: true },
+        { to: '/vender', label: t('nav.sell'), end: false },
+        { to: '/cotizaciones', label: t('nav.purchases'), end: false },
         { to: '/espacio', label: t('nav.space'), end: false },
         { to: '/explorar', label: t('nav.explore'), end: false },
       ];
@@ -231,11 +234,12 @@ function StarTransition({ path }: { path: string }) {
 
 function Logo({ label }: { label: string }) {
   return (
-    <span className="flex items-center gap-2 font-display text-[19px] font-extrabold tracking-tight text-white">
-      <svg viewBox="0 0 40 40" width="20" height="20" className="text-amarillo" aria-hidden="true">
-        <path d="M20 2l4.5 13.5L38 20l-13.5 4.5L20 38l-4.5-13.5L2 20l13.5-4.5z" fill="currentColor" />
+    <span className="flex items-center gap-2.5 font-display text-[17px] font-medium tracking-[0.24em] text-white">
+      <svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+        <path d="M9 9a7 7 0 1 0 6 11 6 6 0 1 1-6-11z" fill="#f7f1e3" />
+        <path d="M2 36 L9 28 L12 30 L16 22 L18 24 L21 6 L24 16 L27 22 L30 21 L38 36 Z" fill="currentColor" />
       </svg>
-      {label.toLowerCase()}
+      {label.toUpperCase()}
     </span>
   );
 }

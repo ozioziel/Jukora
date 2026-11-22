@@ -256,6 +256,14 @@ export default function OrderPage() {
                   {t('supplier.activatePayouts')}
                 </button>
               )}
+              {o.escrowMode === 'partial' && e?.status === 'funded' && Number(e.advanceReleased) === 0 && wallet.data?.hasTrustline && (
+                <div className="mb-4 rounded-2xl border border-oro/30 bg-white/60 p-4">
+                  <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void sa.escrow(o.id, 'claim_advance')}>
+                    {busy && <Busy />} {t('protection.claim', { amount: `${o.advanceAmount} ${o.escrowConfig.asset.code}` })}
+                  </button>
+                  <p className="hint mt-2">{t('protection.claimNote')}</p>
+                </div>
+              )}
               {o.status === 'funded' && (
                 <button type="button" className="btn" onClick={() => supplierUpdate.mutate('preparing')}>
                   {t('order.markPreparing')}
@@ -331,6 +339,7 @@ export default function OrderPage() {
         </div>
 
         <aside className="space-y-6">
+          <ProtectionPanel o={o} />
           <DeliveryPanel o={o} />
           <section className="panel">
             <h2 className="mb-3 font-semibold">{t('order.tracking')}</h2>
@@ -501,6 +510,56 @@ function DeliveryPanel({ o }: { o: OrderDetail }) {
         </dl>
       )}
       <p className="hint mt-3">{pickup ? t('delivery.pickupNote') : t('delivery.supplierShipsNote')}</p>
+    </section>
+  );
+}
+
+/** Protección del pago: motor del escrow, modalidad, anticipo y lo que sigue retenido en el contrato. */
+function ProtectionPanel({ o }: { o: OrderDetail }) {
+  const { t } = useTranslation();
+  const e = o.escrow;
+  const released = e ? Number(e.advanceReleased) : 0;
+  const advance = Number(o.advanceAmount);
+  const partial = o.escrowMode === 'partial';
+  const contract = e?.contractId ?? o.escrowConfig.contractId;
+  const pct = Number(o.amount) > 0 ? Math.round((advance / Number(o.amount)) * 100) : 0;
+  return (
+    <section className="panel">
+      <h2 className="mb-1 font-semibold">{t('protection.title')}</h2>
+      <p className="mb-4 text-xs text-muted">
+        {o.escrowProvider === 'soroban' ? t('protection.engineSoroban') : t('protection.engineTw')} ·{' '}
+        {partial ? t('protection.modePartial') : t('protection.modeFull')}
+      </p>
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-ink/10" aria-hidden="true">
+        {partial && <span className="bg-[#7d93a8]" style={{ width: `${pct}%` }} />}
+        <span className="bg-oro" style={{ width: `${partial ? 100 - pct : 100}%` }} />
+      </div>
+      <dl className="mt-4 space-y-1 text-sm">
+        {partial && (
+          <div className="flex justify-between">
+            <dt>{released > 0 ? t('protection.released') : t('protection.advance')}</dt>
+            <dd>
+              <Money amount={o.advanceAmount} currency={o.currency} />
+            </dd>
+          </div>
+        )}
+        <div className="flex justify-between font-semibold">
+          <dt>{t('protection.protected')}</dt>
+          <dd>
+            <Money amount={String(Math.max(0, Number(o.amount) - released))} currency={o.currency} />
+          </dd>
+        </div>
+      </dl>
+      {contract && (
+        <a
+          className="mt-3 inline-flex items-center gap-1 text-xs text-teal hover:underline"
+          href={`${EXPLORER}/contract/${contract}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t('protection.contract')} <ExternalLink size={12} />
+        </a>
+      )}
     </section>
   );
 }

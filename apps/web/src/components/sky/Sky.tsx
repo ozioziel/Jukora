@@ -56,7 +56,8 @@ function SkyLayer({ state }: { state: SkyState }) {
     const ctx = cv?.getContext('2d');
     if (!cv || !ctx) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const cols = ['#fff6e8', '#fff6e8', '#fff6e8', '#dff3ff', '#ffe9b0', '#ffd6ea'];
+    // Montuno: estrellas casi blancas, sin colores que distraigan.
+    const cols = ['#f3f1ea', '#f3f1ea', '#e4e9f0'];
     let W = 0;
     let H = 0;
     let raf = 0;
@@ -68,7 +69,7 @@ function SkyLayer({ state }: { state: SkyState }) {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = cv.width = window.innerWidth * dpr;
       H = cv.height = window.innerHeight * dpr;
-      const n = Math.round((window.innerWidth * window.innerHeight) / 11000);
+      const n = Math.round((window.innerWidth * window.innerHeight) / 16000);
       stars = Array.from({ length: n }, () => ({
         x: Math.random() * W,
         y: Math.random() * H * 0.62,
@@ -151,33 +152,31 @@ function SkyLayer({ state }: { state: SkyState }) {
     };
   }, []);
 
-  const layers = useMemo(
-    () =>
-      SKY_KEYS.map((k) => (
-        <div
-          key={k}
-          className="sky-img"
-          data-on={k === state.key}
-          style={{ backgroundImage: `url(/escenas/${k}.webp)`, ['--sky-blur' as string]: `${state.blur}px` }}
-        />
-      )),
-    [state.key, state.blur],
-  );
+  // Fondo sobrio de Montuno: noche azul tinta, luna, cresta de montaña muy suave y estrellas tenues.
+  // Cada página conserva su clave de cielo; solo cambia levemente el tono.
+  const tone = useMemo(() => (state.key === 'bg-alba' || state.key.startsWith('card-') ? 'dawn' : 'night'), [state.key]);
 
   return (
     <>
-      <div className="sky" aria-hidden="true">
-        {layers}
+      <div className="sky" data-tone={tone} aria-hidden="true">
+        <div className="sky-base" />
+        <div className="sky-moon" />
         <canvas ref={canvas} />
+        <svg className="sky-ridge" viewBox="0 0 1440 320" preserveAspectRatio="none">
+          <path d="M0 320 L0 250 L140 196 L210 214 L330 150 L380 168 L470 96 L520 120 L560 60 L600 104 L650 92 L720 170 L800 140 L900 204 L980 178 L1080 226 L1170 198 L1290 240 L1440 210 L1440 320 Z" />
+          <path
+            className="far"
+            d="M0 320 L0 276 L180 236 L300 252 L460 206 L620 236 L760 214 L920 246 L1100 220 L1260 252 L1440 236 L1440 320 Z"
+          />
+        </svg>
         <div className="sky-fog" />
-        <div className="sky-fog" style={{ bottom: 'auto', top: '38vh', height: '30vh', opacity: 0.55, animationDuration: '64s' }} />
         <div className="sky-veil" />
       </div>
       <div
         ref={halo}
         aria-hidden="true"
         className="pointer-events-none fixed top-0 left-0 z-0 hidden h-[420px] w-[420px] rounded-full mix-blend-screen [@media(pointer:fine)]:block"
-        style={{ background: 'radial-gradient(circle, rgb(232 191 69 / .09), rgb(204 58 128 / .05) 40%, transparent 68%)' }}
+        style={{ background: 'radial-gradient(circle, rgb(243 241 234 / .07), rgb(125 147 168 / .05) 40%, transparent 68%)' }}
       />
     </>
   );
