@@ -47,3 +47,26 @@ insert into public.reviews (author_id, org_id, supplier_rating, product_rating, 
   ('00000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000001', 4, 4, 'Reseña DEMO: buena comunicación.', true),
   ('00000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000003', 5, 4, 'Reseña DEMO: mobiliario como en la descripción.', true),
   ('00000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000004', 4, null, 'Reseña DEMO: respondió la cotización en dos días.', true);
+
+-- ── Envíos DEMO (Jukora es pasarela: el envío lo hace el proveedor) ──
+-- Costos de envío y retiro ficticios. Se puede ejecutar sola en el SQL Editor si el resto del
+-- seed ya se cargó (es idempotente: solo actualiza artículos DEMO).
+update public.listings l set shipping_cost = v.cost, pickup_address = v.pickup
+from (values
+  ('Parrilla a gas de 4 quemadores', 25, 'Av. Buenos Aires 1450, zona Max Paredes (DEMO)'),
+  ('Plancha freidora de acero 60 cm', 20, 'Av. Buenos Aires 1450, zona Max Paredes (DEMO)'),
+  ('Freidora industrial doble canasta', 20, 'Av. Buenos Aires 1450, zona Max Paredes (DEMO)'),
+  ('Parrilla grill a gas 4 quemadores', 60, ''),
+  ('Cocina industrial 6 hornillas', 80, ''),
+  ('Parrilla charbroiler inox 4 queimadores', 95, ''),
+  ('Mesa de trabajo de acero inoxidable', 70, ''),
+  ('Refrigerador vertical 2 puertas 1000 L', 45, 'Av. Blanco Galindo km 4 (DEMO)'),
+  ('Congelador horizontal 400 L', 35, 'Av. Blanco Galindo km 4 (DEMO)'),
+  ('Refrigerador vertical usado 600 L', 35, 'Av. Blanco Galindo km 4 (DEMO)'),
+  ('Mesa de madera para 4 personas', 30, 'Calle Ingavi 230 (DEMO)'),
+  ('Silla de restaurante apilable', 15, 'Calle Ingavi 230 (DEMO)'),
+  ('Máquina de espresso 2 grupos', 30, 'Calle Sagárnaga 410 (DEMO)'),
+  ('Molino de café profesional', 15, 'Calle Sagárnaga 410 (DEMO)'),
+  ('Set de utensilios de cocina (12 piezas)', 10, 'Calle Sagárnaga 410 (DEMO)')
+) as v(title, cost, pickup)
+where l.is_demo and l.title = v.title;

@@ -256,12 +256,25 @@ export default function OrderPage() {
                   {t('supplier.activatePayouts')}
                 </button>
               )}
+              {o.escrowMode === 'partial' && e?.status === 'funded' && Number(e.advanceReleased) === 0 && wallet.data?.hasTrustline && (
+                <div className="mb-4 rounded-2xl border border-oro/30 bg-white/60 p-4">
+                  <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void sa.escrow(o.id, 'claim_advance')}>
+                    {busy && <Busy />} {t('protection.claim', { amount: `${o.advanceAmount} ${o.escrowConfig.asset.code}` })}
+                  </button>
+                  <p className="hint mt-2">{t('protection.claimNote')}</p>
+                </div>
+              )}
               {o.status === 'funded' && (
                 <button type="button" className="btn" onClick={() => supplierUpdate.mutate('preparing')}>
                   {t('order.markPreparing')}
                 </button>
               )}
-              {['funded', 'preparing'].includes(o.status) && (
+              {o.fulfillment === 'pickup' && ['funded', 'preparing'].includes(o.status) && (
+                <button type="button" className="btn btn-primary mt-3" onClick={() => supplierUpdate.mutate('delivery_notified')}>
+                  {t('delivery.markReadyForPickup')}
+                </button>
+              )}
+              {o.fulfillment === 'delivery' && ['funded', 'preparing'].includes(o.status) && (
                 <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                   <input
                     aria-label={t('order.carrier')}
@@ -287,7 +300,7 @@ export default function OrderPage() {
                   {t('order.markDelivered')}
                 </button>
               )}
-              <p className="hint mt-3">{t('order.simulatedLogistics')}</p>
+              <p className="hint mt-3">{o.isDemo ? t('order.simulatedLogistics') : t('delivery.supplierShipsNote')}</p>
               <Stage stage={sa.stage} />
               <ErrorNote error={supplierUpdate.error ?? sa.error} />
             </section>
@@ -326,31 +339,37 @@ export default function OrderPage() {
         </div>
 
         <aside className="space-y-6">
+          <ProtectionPanel o={o} />
+          <DeliveryPanel o={o} />
           <section className="panel">
             <h2 className="mb-3 font-semibold">{t('order.tracking')}</h2>
             <ol className="space-y-2 text-sm">
-              {['pending_payment', 'funded', 'preparing', 'shipped', 'delivery_notified', 'in_review', 'accepted', 'completed'].map((s) => {
-                const order = [
-                  'pending_payment',
-                  'funded',
-                  'preparing',
-                  'shipped',
-                  'delivery_notified',
-                  'in_review',
-                  'accepted',
-                  'completed',
-                ];
-                const done = order.indexOf(o.status) >= order.indexOf(s) && o.status !== 'cancelled';
-                return (
-                  <li key={s} className={`flex items-center gap-2 ${done ? 'text-cream' : 'text-muted/60'}`}>
-                    <span className={`h-2 w-2 rounded-full ${done ? 'bg-amber' : 'bg-line'}`} aria-hidden="true" /> {t(`order.status.${s}`)}
-                  </li>
-                );
-              })}
+              {['pending_payment', 'funded', 'preparing', 'shipped', 'delivery_notified', 'in_review', 'accepted', 'completed']
+                .filter((s) => !(o.fulfillment === 'pickup' && s === 'shipped'))
+                .map((s) => {
+                  const order = [
+                    'pending_payment',
+                    'funded',
+                    'preparing',
+                    'shipped',
+                    'delivery_notified',
+                    'in_review',
+                    'accepted',
+                    'completed',
+                  ];
+                  const done = order.indexOf(o.status) >= order.indexOf(s) && o.status !== 'cancelled';
+                  return (
+                    <li key={s} className={`flex items-center gap-2 ${done ? 'text-cream' : 'text-muted/60'}`}>
+                      <span className={`h-2 w-2 rounded-full ${done ? 'bg-amber' : 'bg-line'}`} aria-hidden="true" />{' '}
+                      {o.fulfillment === 'pickup' && s === 'delivery_notified' ? t('delivery.readyForPickup') : t(`order.status.${s}`)}
+                    </li>
+                  );
+                })}
             </ol>
             {o.shipments.map((s) => (
               <p key={s.id} className="mt-3 text-xs text-muted">
-                {s.carrier} {s.tracking && `· ${s.tracking}`} {s.isSimulated && <DemoBadge label={t('order.simulatedLogistics')} />}
+                {s.carrier || t('delivery.noCarrier')} {s.tracking && `· ${s.tracking}`}{' '}
+                {s.isSimulated ? <DemoBadge label={t('order.simulatedLogistics')} /> : <span>· {t('delivery.reportedBySupplier')}</span>}
               </p>
             ))}
           </section>
@@ -438,5 +457,109 @@ export default function OrderPage() {
         </form>
       </Dialog>
     </div>
+  );
+}
+
+/** Entrega: el envío lo hace el proveedor. Sus datos privados solo aparecen cuando cada parte puede verlos. */
+function DeliveryPanel({ o }: { o: OrderDetail }) {
+  const { t } = useTranslation();
+  const d = o.delivery;
+  const pickup = o.fulfillment === 'pickup';
+  return (
+    <section className="panel">
+      <h2 className="mb-3 font-semibold">{pickup ? t('delivery.pickupTitle') : t('delivery.title')}</h2>
+      {!pickup && (
+        <p className="mb-2 text-sm">
+          {t('quotes.shipping')}: <Money amount={o.shipping} currency={o.currency} />
+        </p>
+      )}
+      {o.deliveryHidden || !d ? (
+        <p className="text-sm text-muted">{t('delivery.hiddenUntilFunded')}</p>
+      ) : pickup ? (
+        <dl className="space-y-1 text-sm">
+          <div>
+            <dt className="text-xs text-muted">{t('delivery.pickupWhere')}</dt>
+            <dd>
+              {d.pickup?.address
+                ? `${d.pickup.address}, ${d.pickup.city ?? ''}`
+                : t('delivery.pickupAddressAfterFunding', { city: d.pickup?.city ?? '' })}
+            </dd>
+          </div>
+          {o.role !== 'buyer' && d.phone && (
+            <div>
+              <dt className="text-xs text-muted">{t('delivery.buyerPhone')}</dt>
+              <dd>{d.phone}</dd>
+            </div>
+          )}
+        </dl>
+      ) : (
+        <dl className="space-y-1 text-sm">
+          <div>
+            <dt className="text-xs text-muted">{t('delivery.address')}</dt>
+            <dd>
+              {d.address}
+              {d.reference ? ` (${d.reference})` : ''}
+              <br />
+              {[d.city, d.region, d.country].filter(Boolean).join(', ')}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted">{t('delivery.phone')}</dt>
+            <dd>{d.phone}</dd>
+          </div>
+        </dl>
+      )}
+      <p className="hint mt-3">{pickup ? t('delivery.pickupNote') : t('delivery.supplierShipsNote')}</p>
+    </section>
+  );
+}
+
+/** Protección del pago: motor del escrow, modalidad, anticipo y lo que sigue retenido en el contrato. */
+function ProtectionPanel({ o }: { o: OrderDetail }) {
+  const { t } = useTranslation();
+  const e = o.escrow;
+  const released = e ? Number(e.advanceReleased) : 0;
+  const advance = Number(o.advanceAmount);
+  const partial = o.escrowMode === 'partial';
+  const contract = e?.contractId ?? o.escrowConfig.contractId;
+  const pct = Number(o.amount) > 0 ? Math.round((advance / Number(o.amount)) * 100) : 0;
+  return (
+    <section className="panel">
+      <h2 className="mb-1 font-semibold">{t('protection.title')}</h2>
+      <p className="mb-4 text-xs text-muted">
+        {o.escrowProvider === 'soroban' ? t('protection.engineSoroban') : t('protection.engineTw')} ·{' '}
+        {partial ? t('protection.modePartial') : t('protection.modeFull')}
+      </p>
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-ink/10" aria-hidden="true">
+        {partial && <span className="bg-[#7d93a8]" style={{ width: `${pct}%` }} />}
+        <span className="bg-oro" style={{ width: `${partial ? 100 - pct : 100}%` }} />
+      </div>
+      <dl className="mt-4 space-y-1 text-sm">
+        {partial && (
+          <div className="flex justify-between">
+            <dt>{released > 0 ? t('protection.released') : t('protection.advance')}</dt>
+            <dd>
+              <Money amount={o.advanceAmount} currency={o.currency} />
+            </dd>
+          </div>
+        )}
+        <div className="flex justify-between font-semibold">
+          <dt>{t('protection.protected')}</dt>
+          <dd>
+            <Money amount={String(Math.max(0, Number(o.amount) - released))} currency={o.currency} />
+          </dd>
+        </div>
+      </dl>
+      {contract && (
+        <a
+          className="mt-3 inline-flex items-center gap-1 text-xs text-teal hover:underline"
+          href={`${EXPLORER}/contract/${contract}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t('protection.contract')} <ExternalLink size={12} />
+        </a>
+      )}
+    </section>
   );
 }

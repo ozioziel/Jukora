@@ -4,6 +4,7 @@ import { nextQuotaReset, quotaDayKey } from './quota.js';
 import { rankCandidates, weightsFor } from './ranking.js';
 import { SearchRequestSchema } from './search.js';
 import { canTransitionOrder } from './states.js';
+import { DeliveryInputSchema, deliveryFor, sameCity } from './delivery.js';
 
 describe('money', () => {
   it('convierte sin perder precisión', () => {
@@ -114,5 +115,52 @@ describe('pedido', () => {
   it('el proveedor no puede saltar a aceptado', () => {
     expect(canTransitionOrder('shipped', 'accepted')).toBe(false);
     expect(canTransitionOrder('in_review', 'accepted')).toBe(true);
+  });
+  it('retiro en local: de financiado o en preparación a «listo / entrega notificada»', () => {
+    expect(canTransitionOrder('funded', 'delivery_notified')).toBe(true);
+    expect(canTransitionOrder('preparing', 'delivery_notified')).toBe(true);
+    expect(canTransitionOrder('pending_payment', 'delivery_notified')).toBe(false);
+  });
+});
+
+describe('entrega', () => {
+  it('envío: exige dirección y teléfono', () => {
+    const ok = DeliveryInputSchema.safeParse({
+      fulfillment: 'delivery',
+      country: 'BO',
+      region: 'La Paz',
+      city: 'El Alto',
+      address: 'Av. Juan Pablo II 123',
+      phone: '+591 71234567',
+    });
+    expect(ok.success).toBe(true);
+    expect(DeliveryInputSchema.safeParse({ fulfillment: 'delivery', country: 'BO', city: 'El Alto', phone: '71234567' }).success).toBe(
+      false,
+    );
+  });
+  it('retiro: solo ciudad y teléfono; teléfono inválido se rechaza', () => {
+    expect(DeliveryInputSchema.safeParse({ fulfillment: 'pickup', city: 'Tarija', phone: '71234567' }).success).toBe(true);
+    expect(DeliveryInputSchema.safeParse({ fulfillment: 'pickup', city: 'Tarija', phone: 'llámame' }).success).toBe(false);
+  });
+  it('el proveedor no ve la dirección hasta que el pago esté financiado', () => {
+    const rec = { fulfillment: 'delivery', country: 'BO', region: 'La Paz', city: 'El Alto', address: 'Calle 1', phone: '71234567' };
+    expect(deliveryFor('supplier', false, rec)).toEqual({ visible: false, data: null });
+    expect(deliveryFor('supplier', true, rec).data).toEqual(rec);
+    expect(deliveryFor('buyer', false, rec).data).toEqual(rec);
+  });
+  it('retiro: la dirección del local se muestra al comprador solo con el pago financiado', () => {
+    const rec = { fulfillment: 'pickup', city: 'Tarija', phone: '71234567', pickup: { address: 'Av. Las Américas 10', city: 'Tarija' } };
+    expect(deliveryFor('buyer', false, rec).data).toEqual({
+      fulfillment: 'pickup',
+      city: 'Tarija',
+      phone: '71234567',
+      pickup: { city: 'Tarija' },
+    });
+    expect(deliveryFor('buyer', true, rec).data).toEqual(rec);
+  });
+  it('misma ciudad sin importar tildes ni mayúsculas', () => {
+    expect(sameCity('Potosí', ' potosi ')).toBe(true);
+    expect(sameCity('La Paz', 'El Alto')).toBe(false);
+    expect(sameCity('', '')).toBe(false);
   });
 });

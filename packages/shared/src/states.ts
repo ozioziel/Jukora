@@ -124,6 +124,8 @@ export const NOTIFICATION_KINDS = [
   'refund_confirmed',
   'verification_required',
   'rfq_received',
+  'advance_released',
+  'link_accepted',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -134,8 +136,9 @@ export type DataOrigin = (typeof DATA_ORIGINS)[number];
 /** Transiciones de pedido permitidas. Aceptación la hace el comprador; nunca el proveedor. */
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   pending_payment: ['funded', 'cancelled'],
-  funded: ['preparing', 'shipped'],
-  preparing: ['shipped'],
+  // delivery_notified directo: retiro en local («listo para retirar») o entrega en mano del proveedor.
+  funded: ['preparing', 'shipped', 'delivery_notified'],
+  preparing: ['shipped', 'delivery_notified'],
   shipped: ['delivery_notified'],
   delivery_notified: ['in_review'],
   in_review: ['accepted'],

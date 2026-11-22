@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Busy, DemoBadge, EmptyState, ErrorNote, Money, PageHeader, TrustLabel } from '@/components/ui';
+import { DemoBadge, EmptyState, ErrorNote, Money, PageHeader, TrustLabel } from '@/components/ui';
+import { AcceptQuoteDialog } from '@/features/procurement/RequestDialogs';
 import { api } from '@/lib/api';
 import type { Quote } from '@/lib/types';
 
@@ -22,13 +24,8 @@ export default function Quotes() {
   const nav = useNavigate();
   const quotes = useQuery({ queryKey: ['quotes'], queryFn: () => api<Quote[]>('/quotes/mine') });
   const orders = useQuery({ queryKey: ['orders', 'buyer'], queryFn: () => api<MyOrder[]>('/orders?as=buyer') });
-  const accept = useMutation({
-    mutationFn: (id: string) => api<{ orderId: string }>(`/quotes/${id}/accept`, { method: 'POST' }),
-    onSuccess: (r) => {
-      void qc.invalidateQueries();
-      void nav(`/pedidos/${r.orderId}`);
-    },
-  });
+  // Aceptar abre el formulario de entrega (dirección y teléfono): el envío lo hace el proveedor.
+  const [accepting, setAccepting] = useState<Quote | null>(null);
   const reject = useMutation({
     mutationFn: (id: string) => api(`/quotes/${id}/reject`, { method: 'POST' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quotes'] }),
@@ -38,7 +35,7 @@ export default function Quotes() {
   return (
     <div className="container-x pt-10 pb-16">
       <PageHeader title={t('quotes.received')} subtitle={t('quotes.acceptNote')} />
-      <ErrorNote error={quotes.error ?? accept.error} />
+      <ErrorNote error={quotes.error} />
       {quotes.isSuccess && quotes.data.length === 0 && <EmptyState motif="oruro" text={t('quotes.none')} />}
       <ul className="grid gap-4 lg:grid-cols-2">
         {quotes.data?.map((q) => (
@@ -84,8 +81,8 @@ export default function Quotes() {
             </p>
             {q.status === 'sent' && (
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn btn-primary btn-sm" disabled={accept.isPending} onClick={() => accept.mutate(q.id)}>
-                  {accept.isPending && <Busy />} {t('quotes.accept')}
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setAccepting(q)}>
+                  {t('quotes.accept')}
                 </button>
                 <button type="button" className="btn btn-sm" onClick={() => reject.mutate(q.id)}>
                   {t('quotes.reject')}
@@ -95,6 +92,25 @@ export default function Quotes() {
           </li>
         ))}
       </ul>
+
+      {accepting && (
+        <AcceptQuoteDialog
+          open
+          onClose={() => setAccepting(null)}
+          quote={{
+            id: accepting.id,
+            title: accepting.rfqTitle ?? '',
+            supplierName: accepting.supplier.name,
+            total: accepting.total,
+            shipping: accepting.shipping,
+            currency: accepting.currency,
+          }}
+          onAccepted={(orderId) => {
+            void qc.invalidateQueries();
+            void nav(`/pedidos/${orderId}`);
+          }}
+        />
+      )}
 
       <h2 className="display mt-14 mb-4 text-3xl">{t('order.myOrders')}</h2>
       <ul className="grid gap-3">

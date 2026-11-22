@@ -32,6 +32,16 @@ async function login(mode: 'buyer' | 'supplier' = 'buyer') {
   return { agent, kp, user: r.body.user };
 }
 
+const ADDRESS = {
+  fulfillment: 'delivery',
+  country: 'BO',
+  region: 'La Paz',
+  city: 'El Alto',
+  address: 'Av. Juan Pablo II 1234, zona 16 de Julio',
+  reference: 'Portón verde (DATO DE PRUEBA)',
+  phone: '+591 71234567',
+};
+
 const searchBody = (projectId?: string) => ({
   projectId,
   intent: 'start',
@@ -190,12 +200,19 @@ describe('Explorar, cotización y pedido', () => {
       .post(`/api/rfqs/${rfq.body.id}/quotes`)
       .send({ quantity: 1, unitPrice: '300', shipping: '0', currency: 'USD', leadTimeDays: 3, validDays: 7 })
       .expect(201);
+    // Aceptar exige dirección y teléfono (el envío lo hace el proveedor).
+    await buyer.agent.post(`/api/quotes/${quote.body.id}/accept`).send({}).expect(400);
     // El proveedor no puede aceptar su propia cotización.
-    await supplier.agent.post(`/api/quotes/${quote.body.id}/accept`).expect(404);
-    const accepted = await buyer.agent.post(`/api/quotes/${quote.body.id}/accept`).expect(200);
+    await supplier.agent.post(`/api/quotes/${quote.body.id}/accept`).send({ delivery: ADDRESS }).expect(404);
+    const accepted = await buyer.agent.post(`/api/quotes/${quote.body.id}/accept`).send({ delivery: ADDRESS }).expect(200);
     const order = await buyer.agent.get(`/api/orders/${accepted.body.orderId}`).expect(200);
     expect(order.body.status).toBe('pending_payment');
     expect(order.body.platformFee).toEqual({ amount: '7.5', percent: '2.5' });
+    expect(order.body.delivery).toMatchObject({ fulfillment: 'delivery', city: 'El Alto', phone: '+591 71234567' });
+    // Sin pago financiado, el proveedor todavía no ve la dirección del comprador.
+    const asSupplier = await supplier.agent.get(`/api/orders/${accepted.body.orderId}`).expect(200);
+    expect(asSupplier.body.delivery).toBeNull();
+    expect(asSupplier.body.deliveryHidden).toBe(true);
 
     // Sin financiación confirmada, el proveedor no puede marcar envío.
     await supplier.agent.post(`/api/orders/${accepted.body.orderId}/supplier-update`).send({ status: 'shipped' }).expect(409);
@@ -205,5 +222,92 @@ describe('Explorar, cotización y pedido', () => {
     // Avisos: el comprador recibió la cotización.
     const notes = await buyer.agent.get('/api/notifications').expect(200);
     expect(notes.body.updates.length + notes.body.attention.length).toBeGreaterThan(0);
+  });
+  it('compra directa: envío al costo del proveedor o retiro solo en la misma ciudad', async () => {
+    const buyer = await login();
+    const supplier = await login('supplier');
+    await supplier.agent.post('/api/supplier/org').send({ name: 'Proveedor envíos', country: 'BO', city: 'La Paz' }).expect(201);
+    const listing = await supplier.agent
+      .post('/api/supplier/listings')
+      .send({
+        title: 'Freidora de prueba',
+        category: 'freidora',
+        price: '100',
+        currency: 'USD',
+        originCountry: 'BO',
+        originCity: 'La Paz',
+        shipsTo: ['BO'],
+        shippingCost: '15',
+        pickupAddress: 'Calle Comercio 100 (DATO DE PRUEBA)',
+      })
+      .expect(201);
+    await supplier.agent.post(`/api/supplier/listings/${listing.body.id}/published`).expect(201);
+    const pub = await buyer.agent.get(`/api/listings/${listing.body.id}`).expect(200);
+    expect(pub.body.shipping).toEqual({ amount: '15', currency: 'USD' });
+    expect(pub.body.pickup).toEqual({ city: 'La Paz' }); // la dirección del local no es pública
+
+    // Envío: total = precio × cantidad + costo de envío.
+    const sent = await buyer.agent
+      .post('/api/orders/from-listing')
+      .send({ listingId: listing.body.id, quantity: 2, delivery: ADDRESS })
+      .expect(201);
+    const o1 = await buyer.agent.get(`/api/orders/${sent.body.orderId}`).expect(200);
+    expect(o1.body).toMatchObject({ amount: '215', shipping: '15', fulfillment: 'delivery' });
+
+    // Retiro desde otra ciudad: no permitido. Misma ciudad: sin costo de envío.
+    await buyer.agent
+      .post('/api/orders/from-listing')
+      .send({ listingId: listing.body.id, quantity: 1, delivery: { fulfillment: 'pickup', city: 'Cochabamba', phone: '71234567' } })
+      .expect(409);
+    const picked = await buyer.agent
+      .post('/api/orders/from-listing')
+      .send({ listingId: listing.body.id, quantity: 1, delivery: { fulfillment: 'pickup', city: ' la paz ', phone: '71234567' } })
+      .expect(201);
+    const o2 = await buyer.agent.get(`/api/orders/${picked.body.orderId}`).expect(200);
+    expect(o2.body).toMatchObject({ amount: '100', shipping: '0', fulfillment: 'pickup' });
+    // Antes del pago, el comprador sabe la ciudad del retiro pero no la dirección del local.
+    expect(o2.body.delivery.pickup).toEqual({ city: 'La Paz' });
+
+    // Destino no atendido por el proveedor.
+    await buyer.agent
+      .post('/api/orders/from-listing')
+      .send({ listingId: listing.body.id, quantity: 1, delivery: { ...ADDRESS, country: 'PE' } })
+      .expect(409);
+  });
+  it('enlace de checkout: la importadora lo crea, el comprador lo ve sin cuenta y lo acepta una sola vez', async () => {
+    const buyer = await login();
+    const seller = await login('supplier');
+    await seller.agent.post('/api/supplier/org').send({ name: 'Importadora de prueba', country: 'BO', city: 'La Paz' }).expect(201);
+    // Anticipo por encima del tope de la plataforma: rechazado.
+    await seller.agent
+      .post('/api/links')
+      .send({ title: 'Celular de prueba', price: '100', deliveryDays: 20, mode: 'partial', advance: '90' })
+      .expect(400);
+    const link = await seller.agent
+      .post('/api/links')
+      .send({ title: 'Celular de prueba', price: '100', shipping: '20', deliveryDays: 20, mode: 'full' })
+      .expect(201);
+    expect(link.body.url).toMatch(/\/c\/[A-Za-z0-9_-]{20,}$/);
+
+    // Vista pública: sin wallets ni datos personales; trae el aviso de riesgo con su huella.
+    const view = await request(app.getHttpServer()).get(`/api/checkout/${link.body.token}`).expect(200);
+    expect(view.body).toMatchObject({ total: '120', mode: 'full', status: 'active' });
+    expect(view.body.disclosure.version).toBe('full/v1');
+    expect(JSON.stringify(view.body)).not.toMatch(/payout|address|G[A-Z2-7]{55}/);
+
+    const body = { delivery: ADDRESS, disclosureVersion: view.body.disclosure.version, disclosureHash: view.body.disclosure.hash };
+    // La importadora no puede comprar su propio enlace; un aviso distinto al mostrado se rechaza.
+    await seller.agent.post(`/api/checkout/${link.body.token}/accept`).send(body).expect(403);
+    await buyer.agent
+      .post(`/api/checkout/${link.body.token}/accept`)
+      .send({ ...body, disclosureHash: '0'.repeat(64) })
+      .expect(409);
+    const ok = await buyer.agent.post(`/api/checkout/${link.body.token}/accept`).send(body).expect(200);
+    const order = await buyer.agent.get(`/api/orders/${ok.body.orderId}`).expect(200);
+    expect(order.body).toMatchObject({ amount: '120', shipping: '20', escrowMode: 'full', status: 'pending_payment' });
+    // Un enlace se usa una sola vez.
+    await buyer.agent.post(`/api/checkout/${link.body.token}/accept`).send(body).expect(409);
+    const mine = await seller.agent.get('/api/links/mine').expect(200);
+    expect(mine.body[0]).toMatchObject({ status: 'accepted', orderId: ok.body.orderId });
   });
 });

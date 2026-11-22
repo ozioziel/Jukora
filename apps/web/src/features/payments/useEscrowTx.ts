@@ -42,7 +42,7 @@ export function useSignedAction() {
   );
 
   const escrow = useCallback(
-    (orderId: string, action: 'fund' | 'approve' | 'dispute' | 'change_status', extra: Record<string, unknown> = {}) =>
+    (orderId: string, action: 'fund' | 'approve' | 'dispute' | 'change_status' | 'claim_advance', extra: Record<string, unknown> = {}) =>
       run(
         () =>
           api<{ txId: string; unsignedXdr: string; networkPassphrase: string }>(`/orders/${orderId}/escrow/prepare`, {

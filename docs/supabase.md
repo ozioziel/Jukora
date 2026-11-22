@@ -22,12 +22,12 @@ Funciones: `reserve_search_quota` (reserva atómica e idempotente, bloqueo por u
    ```bash
    npx supabase@2.119.0 db push --db-url "$SUPABASE_DB_URL"
    ```
-5. **No** cargar `seed.sql` en producción (son datos DEMO).
+5. `seed.sql` son datos **ficticios** etiquetados DEMO (proveedores, artículos, costos de envío). Para la demo pública se pueden cargar una vez con el SQL Editor; retirarlos antes de operar con proveedores reales. Su último bloque (envíos DEMO) se puede ejecutar solo si el resto ya estaba cargado.
 6. El plan Free pausa el proyecto tras ~1 semana sin actividad: reactivarlo desde el panel si ocurre.
 
 ## Comprobación
 
 ```sql
-select count(*) from public.listings;               -- 0 en producción, 17 en local DEMO
+select count(*) from public.listings;               -- 0 sin datos DEMO; 17 con seed.sql
 select tablename from pg_tables where schemaname='public' and rowsecurity = false;  -- debe devolver 0 filas
 ```

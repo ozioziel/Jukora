@@ -23,6 +23,9 @@ const empty = {
   leadTimeDays: '',
   warranty: '',
   specs: '',
+  // El envío lo hace el proveedor: fija su costo y, si quiere, ofrece retiro en su local.
+  shippingCost: '0',
+  pickupAddress: '',
 };
 
 function parseSpecs(text: string): Record<string, string> {
@@ -61,6 +64,8 @@ export default function PublishItem() {
           shipsTo: f.shipsTo.split(/[,\s]+/).filter((c) => /^[A-Z]{2}$/.test(c)),
           leadTimeDays: f.leadTimeDays ? Number(f.leadTimeDays) : null,
           warranty: f.warranty || undefined,
+          shippingCost: f.shippingCost || '0',
+          pickupAddress: f.pickupAddress.trim() || undefined,
         },
       });
       if (publish) await api(`/supplier/listings/${r.id}/published`, { method: 'POST' });
@@ -124,6 +129,16 @@ export default function PublishItem() {
           {input('shipsTo', t('supplier.fields.shipsTo'))}
           {input('leadTimeDays', t('supplier.fields.leadTime'), { inputMode: 'numeric' })}
           {input('warranty', t('supplier.fields.warranty'))}
+          {input('shippingCost', `${t('supplier.fields.shippingCost')} (${f.currency})`, {
+            inputMode: 'decimal',
+            required: true,
+            pattern: '\\d+(\\.\\d{1,7})?',
+          })}
+          {input('pickupAddress', t('supplier.fields.pickupAddress'), {
+            maxLength: 200,
+            placeholder: t('supplier.fields.pickupPlaceholder'),
+          })}
+          <p className="hint md:col-span-2">{t('supplier.fields.shippingNote')}</p>
           <label className="block md:col-span-2">
             <span className="label">{t('supplier.description')}</span>
             <textarea

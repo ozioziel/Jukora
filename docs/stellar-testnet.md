@@ -23,7 +23,7 @@ Además despliega el contrato SAC del token (`DEMO_TOKEN_CONTRACT_ID`), que se u
 
 Detalles de la integración: API REST `https://dev.api.trustlesswork.com` (cabecera `x-api-key`, 50 solicitudes/60 s). Cada acción devuelve un XDR sin firmar; firma el rol correspondiente y se envía con `/helper/send-transaction`. **Pendiente de verificar con la clave:** formato exacto de `roles` y si `trustline.address` debe ser el contrato SAC (configurado así) o el emisor.
 
-Flujo implementado: plataforma despliega → comprador financia (firma) → proveedor marca envío y entrega → comprador revisa y aprueba (firma) → plataforma libera. Disputa: comprador o proveedor la abre (firma) → árbitro decide y firma la resolución (los montos deben sumar el total del escrow).
+Flujo implementado: plataforma despliega → comprador financia (firma) → proveedor (que hace el envío o prepara el retiro) marca envío y entrega → comprador revisa y aprueba (firma) → plataforma libera. Disputa: comprador o proveedor la abre (firma) → árbitro decide y firma la resolución (los montos deben sumar el total del escrow).
 
 ## Pagar con QR (Pollar)
 

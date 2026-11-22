@@ -39,6 +39,10 @@ export const EnvSchema = z
       .default('USDCDEMO'),
     DEMO_TOKEN_ISSUER: stellarAddress,
     DEMO_TOKEN_CONTRACT_ID: optional,
+    // Contrato escrow de Montuno (Soroban): escrow completo y anticipo parcial. Instancia con el token de prueba.
+    MONTUNO_ESCROW_CONTRACT_ID: optional,
+    // Tope de anticipo que ofrece la plataforma (puntos básicos; el contrato limita a su propio máximo).
+    MONTUNO_MAX_ADVANCE_BPS: z.coerce.number().int().min(0).max(9000).default(7000),
     DEMO_TOKEN_ISSUER_SECRET: stellarSecret,
 
     TW_API_URL: z.url().default('https://dev.api.trustlesswork.com'),

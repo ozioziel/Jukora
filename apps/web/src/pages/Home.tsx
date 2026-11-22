@@ -1,22 +1,8 @@
-import {
-  ArrowRight,
-  Armchair,
-  BadgeCheck,
-  ChevronLeft,
-  ChevronRight,
-  CookingPot,
-  Flame,
-  PackageCheck,
-  Refrigerator,
-  ShieldCheck,
-  UtensilsCrossed,
-  Wallet,
-  Wind,
-} from 'lucide-react';
+import { ArrowRight, BadgeCheck, Clock, Link2, Lock, MessageCircle, PackageCheck, ShieldCheck, Wallet } from 'lucide-react';
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
-import { SECTOR_COLOR, type Sector } from '@/components/house/House2D';
+import { type Sector } from '@/components/house/House2D';
 import { HouseSprite } from '@/components/house/HouseSprite';
 import { Jucumari2D } from '@/components/jucumari/Jucumari2D';
 import { type SkyKey, useSetSky } from '@/components/sky/Sky';
@@ -38,8 +24,8 @@ const CARDS: { sector: Exclude<Sector, 'new'>; sky: SkyKey }[] = [
   { sector: 'other', sky: 'card-other' },
 ];
 const PANEL_SKY: SkyKey[] = ['bg-alba', 'card-cafe', 'bg-noche', 'bg-ocaso', 'card-workshop', 'bg-alba'];
-const TARGETS = ['/espacio', '/espacio', '/explorar', '/explorar', '#proteccion', '/espacio'];
-const LIST_ICONS = [Flame, CookingPot, Refrigerator, Armchair, Wind, UtensilsCrossed];
+const TARGETS = ['/vender', '/vender', '/vender', '#proteccion', '#proteccion', '/vender'];
+const LIST_ICONS = [Link2, Wallet, Clock, BadgeCheck, ShieldCheck, Lock];
 const reduced = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 type PanelCopy = { title: string; body: string; cta: string };
@@ -51,7 +37,6 @@ export default function Home() {
   const [active, setActive] = useState(0);
   const [inStory, setInStory] = useState(false);
   const [protection, setProtection] = useState(false);
-  const [idea, setIdea] = useState('');
   const panels = t('home.panels', { returnObjects: true }) as PanelCopy[];
   // Escenario fijo con capítulos en escritorio; en pantallas chicas o con movimiento reducido, paneles apilados.
   const [mode] = useState<'pinned' | 'stacked'>(() => (reduced() || window.innerWidth < 900 ? 'stacked' : 'pinned'));
@@ -73,30 +58,11 @@ export default function Home() {
       <p data-form className="mt-5 max-w-md text-lg text-white/90">
         {p.body}
       </p>
-      {i === 0 ? (
-        <form
-          data-form
-          className="mt-8 flex max-w-lg flex-col gap-3 sm:flex-row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void nav('/espacio', { state: { idea: idea.trim() } });
-          }}
-        >
-          <label htmlFor="home-idea" className="sr-only">
-            {t('space.title')}
-          </label>
-          <input id="home-idea" className="field" value={idea} onChange={(e) => setIdea(e.target.value)} placeholder={t('space.title')} />
-          <button className="btn btn-primary btn-lg shrink-0">
-            {p.cta} <ArrowRight size={18} />
-          </button>
-        </form>
-      ) : (
-        <div data-form className="mt-8">
-          <button type="button" className="btn btn-primary btn-lg" onClick={() => go(TARGETS[i]!)}>
-            {TARGETS[i] === '#proteccion' && <ShieldCheck size={18} />} {p.cta} <ArrowRight size={18} />
-          </button>
-        </div>
-      )}
+      <div data-form className="mt-8">
+        <button type="button" className="btn btn-primary btn-lg" onClick={() => go(TARGETS[i]!)}>
+          {TARGETS[i] === '#proteccion' && <ShieldCheck size={18} />} {p.cta} <ArrowRight size={18} />
+        </button>
+      </div>
     </div>
   );
 
@@ -121,123 +87,71 @@ export default function Home() {
   );
 }
 
-/* ─────────────── Portada: galería en arco ─────────────── */
+/* ─────────────── Portada: el trato de WhatsApp convertido en pago protegido ─────────────── */
 function Hero({ active, setActive }: { active: number; setActive: (n: number) => void }) {
   const { t } = useTranslation();
-  const [touched, setTouched] = useState(false);
-  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
+  // La barra de protección «se llena» en bucle (anticipo → protegido), salvo con movimiento reducido.
   useEffect(() => {
-    const r = () => setNarrow(window.innerWidth < 900);
-    window.addEventListener('resize', r);
-    return () => window.removeEventListener('resize', r);
-  }, []);
-  // Avance suave solo hasta que la persona toque la galería; nunca con movimiento reducido.
-  useEffect(() => {
-    if (touched || reduced()) return;
-    const h = window.setInterval(() => !document.hidden && window.scrollY < 200 && setActive((active + 1) % CARDS.length), 6000);
+    if (reduced()) return;
+    const h = window.setInterval(() => !document.hidden && window.scrollY < 200 && setActive((active + 1) % CARDS.length), 5200);
     return () => window.clearInterval(h);
-  }, [touched, active, setActive]);
-  const go = (k: number) => {
-    setTouched(true);
-    setActive((k + CARDS.length) % CARDS.length);
-  };
-  const name = (s: Sector) => (s === 'other' ? t('home.hero.otherName') : t(`sectors.${s}`));
-  const step = narrow ? 150 : 236;
+  }, [active, setActive]);
 
   return (
     <section className="relative flex min-h-[calc(100dvh-80px)] flex-col items-center overflow-clip px-4 pt-10 pb-8 text-center">
-      <h1 className="display on-sky max-w-[980px] text-[clamp(30px,3.9vw,56px)] text-white">
-        {t('home.hero.title1')}{' '}
-        <em className="bg-gradient-to-r from-amarillo via-naranja to-fucsia bg-clip-text not-italic text-transparent drop-shadow-[0_2px_10px_rgb(18_20_56/0.35)]">
-          {t('home.hero.title2')}
-        </em>
+      <p className="eyebrow on-sky mb-4 text-[#9fb3c6]">{t('home.eyebrow')}</p>
+      <h1 className="display on-sky max-w-[980px] text-[clamp(32px,4.2vw,60px)] text-white">
+        {t('home.hero.title1')} <em className="not-italic text-[#cfd9e3]">{t('home.hero.title2')}</em>
       </h1>
-      <p className="on-sky mx-auto mt-4 max-w-[700px] text-lg text-white/90">{t('home.hero.lead')}</p>
-      <div className="mt-3 flex flex-wrap justify-center gap-2.5 text-[13px] font-bold text-white">
-        <span className="float-y rounded-full border border-white/35 bg-[rgb(28_30_70/0.38)] px-3 py-1.5 backdrop-blur">
-          {t('home.hero.factSearches', { n: 10 })}
+      <p className="on-sky mx-auto mt-4 max-w-[700px] text-lg text-white/85">{t('home.hero.lead')}</p>
+      <div className="mt-4 flex flex-wrap justify-center gap-2.5 text-[13px] font-semibold text-white">
+        <span className="float-y rounded-full border border-white/25 bg-white/5 px-3 py-1.5 backdrop-blur">
+          {t('home.hero.factSearches')}
         </span>
-        <span className="float-y rounded-full border border-white/35 bg-[rgb(28_30_70/0.38)] px-3 py-1.5 backdrop-blur [animation-delay:-3s]">
+        <span className="float-y rounded-full border border-white/25 bg-white/5 px-3 py-1.5 backdrop-blur [animation-delay:-3s]">
           {t('home.hero.factEscrow')}
         </span>
       </div>
 
-      <div
-        role="region"
-        aria-roledescription="carrusel"
-        aria-label={t('home.hero.carousel')}
-        className="relative mt-7 mb-4 h-[430px] w-full [perspective:1500px] max-md:h-[360px]"
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowRight') go(active + 1);
-          if (e.key === 'ArrowLeft') go(active - 1);
-        }}
-      >
-        <button type="button" aria-label={t('home.hero.prev')} className="btn btn-icon absolute top-[175px] left-[max(16px,calc(50%-560px))] z-30 max-md:top-[140px]" onClick={() => go(active - 1)}>
-          <ChevronLeft size={22} />
-        </button>
-        <div className="absolute inset-0 [transform-style:preserve-3d]">
-          {CARDS.map((c, k) => {
-            let o = k - active;
-            if (o > CARDS.length / 2) o -= CARDS.length;
-            if (o < -CARDS.length / 2) o += CARDS.length;
-            const a = Math.abs(o);
-            const style = {
-              '--c': SECTOR_COLOR[c.sector],
-              transform: `translateX(${o * step}px) translateZ(${-a * 140}px) rotateY(${-o * 22}deg)`,
-              zIndex: 10 - a,
-              opacity: a > (narrow ? 1 : 2) ? 0 : 1,
-              filter: `brightness(${1 - a * 0.1})`,
-              pointerEvents: a > 2 ? 'none' : undefined,
-              animationDelay: `${-k * 1.2}s`,
-            } as CSSProperties;
-            return (
-              <button
-                key={c.sector}
-                type="button"
-                className="flow-card lglass"
-                style={style}
-                aria-current={o === 0}
-                tabIndex={o === 0 ? 0 : -1}
-                onClick={() => go(k)}
-              >
-                <div className="pic" style={{ backgroundImage: `url(/escenas/${c.sky}.webp)` }}>
-                  <HouseSprite sector={c.sector} reflect className="absolute bottom-[13%] left-[18%] z-[2] w-[64%]" />
-                </div>
-                <span className="absolute top-[18px] left-[18px] z-[3] rounded-lg border border-[color-mix(in_oklab,var(--c)_35%,transparent)] bg-white/85 px-2.5 py-1.5 text-[11px] font-bold tracking-[0.12em] text-[color-mix(in_oklab,var(--c)_70%,#1c1a33)] uppercase">
-                  {name(c.sector)}
-                </span>
-                <span className="absolute inset-x-0 bottom-0 h-[112px] px-[18px] pt-3 max-md:h-[100px]">
-                  <span className="absolute inset-x-2 top-0 h-1 rounded-sm bg-[linear-gradient(90deg,transparent,var(--c),transparent)] opacity-70" />
-                  <span className="mt-2.5 mb-1 block font-display text-[21px] font-extrabold max-md:text-lg">{name(c.sector)}</span>
-                  <span className="block text-[13.5px] leading-snug text-ink-2">{t(`home.hero.blurbs.${c.sector}`)}</span>
-                </span>
-              </button>
-            );
-          })}
+      <div className="relative mt-10 grid w-full max-w-[980px] items-center gap-6 text-left md:grid-cols-[0.85fr_1.15fr]">
+        <div className="lglass float-y mx-auto w-full max-w-[330px] p-4 text-sm [animation-delay:-2s]" aria-hidden="true">
+          <p className="mb-3 flex items-center gap-2 text-xs font-semibold text-ink-2">
+            <MessageCircle size={14} /> WhatsApp
+          </p>
+          <p className="msg msg-bot mb-2">{t('home.demo.chatBot')}</p>
+          <p className="msg msg-me mb-2 ml-8">
+            {t('home.demo.chatMe')} <span className="font-semibold text-oro">montuno/c/8KQ2…</span>
+          </p>
+          <p className="msg msg-bot">{t('home.demo.chatBot2')}</p>
         </div>
-        <button type="button" aria-label={t('home.hero.next')} className="btn btn-icon absolute top-[175px] right-[max(16px,calc(50%-560px))] z-30 max-md:top-[140px]" onClick={() => go(active + 1)}>
-          <ChevronRight size={22} />
-        </button>
+        <div className="lglass float-y mx-auto w-full max-w-[420px] p-6" aria-hidden="true">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-oro/25 px-2.5 py-1 text-[11px] font-bold tracking-[0.12em] text-oro uppercase">
+            <ShieldCheck size={12} /> {t('home.hero.cardBadge')}
+          </span>
+          <p className="mt-3 font-semibold">{t('home.hero.cardTitle')}</p>
+          <p className="text-xs text-ink-2">{t('home.hero.cardSeller')}</p>
+          <p className="mt-3 font-display text-4xl">USD 1.200</p>
+          <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-ink/10">
+            <span className="bg-[#7d93a8] transition-[width] duration-[1600ms] ease-out" style={{ width: active % 2 ? '30%' : '0%' }} />
+            <span className="bg-oro transition-[width] duration-[1600ms] ease-out" style={{ width: active % 2 ? '70%' : '100%' }} />
+          </div>
+          <div className="mt-2 flex justify-between text-xs text-ink-2">
+            <span>{active % 2 ? t('home.hero.cardAdvance') : t('home.hero.cardFull')}</span>
+            <span className="font-semibold text-oro">{active % 2 ? t('home.hero.cardProtected70') : t('home.hero.cardProtected100')}</span>
+          </div>
+          <span className="btn btn-primary pointer-events-none mt-5 w-full justify-center">{t('home.hero.cardPay')}</span>
+        </div>
       </div>
-      <div className="flex justify-center gap-2" aria-hidden="true">
-        {CARDS.map((c, k) => (
-          <i key={c.sector} className={`h-2 rounded-full transition-all duration-500 ${k === active ? 'w-7 bg-amarillo' : 'w-2 bg-white/40'}`} />
-        ))}
-      </div>
-      <div className="mt-5 flex flex-wrap justify-center gap-3.5">
-        <Link to="/espacio" className="btn btn-primary btn-lg">
-          {t('home.hero.start', { name: name(CARDS[active]!.sector) })} <ArrowRight size={18} />
+
+      <div className="mt-9 flex flex-wrap justify-center gap-3.5">
+        <Link to="/vender" className="btn btn-primary btn-lg">
+          {t('home.hero.start')} <ArrowRight size={18} />
         </Link>
-        <Link to="/explorar" className="btn btn-lg">
+        <Link to="/espacio" className="btn btn-lg">
           {t('home.hero.explore')}
         </Link>
       </div>
-      <p className="on-sky mt-4 text-sm text-white/80">
-        <Link to="/espacio" className="underline decoration-amarillo/60 underline-offset-4 hover:text-white">
-          {t('home.skip')}
-        </Link>{' '}
-        · {t('home.scrollHint')}
-      </p>
+      <p className="on-sky mt-4 text-sm text-white/70">{t('home.scrollHint')}</p>
     </section>
   );
 }
@@ -329,7 +243,12 @@ function StoryPinned({ panels, text, onActive }: { panels: PanelCopy[]; text: Te
         // 3. la estrella nace en el oso y vuela al centro con su estela
         const sx = g.left + g.width / 2 - cx;
         const sy = g.top + g.height * 0.45 - cy;
-        T.fromTo(star, { x: sx, y: sy, scale: 0.45, autoAlpha: 1, rotate: 0 }, { x: 0, y: 0, scale: 1.1, rotate: 200, duration: 0.55 }, 0.32)
+        T.fromTo(
+          star,
+          { x: sx, y: sy, scale: 0.45, autoAlpha: 1, rotate: 0 },
+          { x: 0, y: 0, scale: 1.1, rotate: 200, duration: 0.55 },
+          0.32,
+        )
           .to(star, { scale: 1.9, duration: 0.14, ease: 'power1.out' }, 0.87)
           .to(star, { scale: 0.2, autoAlpha: 0, duration: 0.35, ease: 'power2.in' }, 1.0);
         tails.forEach((tail, k) =>
@@ -343,7 +262,12 @@ function StoryPinned({ panels, text, onActive }: { panels: PanelCopy[]; text: Te
         // 4. estalla: anillo de luz e iris que abre el panel siguiente
         T.fromTo(ring, { scale: 0.1, autoAlpha: 0.95 }, { scale: 9, autoAlpha: 0, duration: 0.9, ease: 'power2.out' }, 0.95)
           .set(to, { autoAlpha: 1, zIndex: 3 }, 0.95)
-          .fromTo(to, { clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(150% at 50% 50%)', duration: 0.85, ease: 'power2.out' }, 0.95);
+          .fromTo(
+            to,
+            { clipPath: 'circle(0% at 50% 50%)' },
+            { clipPath: 'circle(150% at 50% 50%)', duration: 0.85, ease: 'power2.out' },
+            0.95,
+          );
         if (from) {
           T.set(from, { autoAlpha: 0, zIndex: 1 }, 1.8);
           T.set([from.querySelector('.container-x'), from.querySelector('.giant')], { clearProps: 'transform,opacity,filter' }, 1.81);
@@ -379,7 +303,11 @@ function StoryPinned({ panels, text, onActive }: { panels: PanelCopy[]; text: Te
       const rim = gsap.fromTo(
         sg,
         { clipPath: 'ellipse(70% 55% at 50% 100%)' },
-        { clipPath: 'ellipse(150% 150% at 50% 100%)', ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'top top', scrub: true } },
+        {
+          clipPath: 'ellipse(150% 150% at 50% 100%)',
+          ease: 'none',
+          scrollTrigger: { trigger: el, start: 'top bottom', end: 'top top', scrub: true },
+        },
       );
       const enter = ScrollTrigger.create({
         trigger: el,
@@ -424,16 +352,23 @@ function StoryPinned({ panels, text, onActive }: { panels: PanelCopy[]; text: Te
     <section ref={wrap} className="relative" style={{ height: `${(N - 1) * 110 + 100}vh` }} aria-label={t('home.scrollHint')}>
       <div ref={stage} className="story-stage sticky top-0 h-[100dvh] overflow-hidden" style={{ '--lp': 0.5 } as CSSProperties}>
         {panels.map((p, i) => (
-          <div key={p.title} data-layer role="group" aria-labelledby={`panel-${i}`} aria-hidden={current !== i} inert={current !== i} className="absolute inset-0">
-            <div
-              className="absolute -inset-10 bg-cover bg-center [animation:pan_46s_ease-in-out_infinite_alternate] [filter:blur(7px)_brightness(0.92)]"
-              style={{ backgroundImage: `url(/escenas/${PANEL_SKY[i]}.webp)` }}
-            />
+          <div
+            key={p.title}
+            data-layer
+            role="group"
+            aria-labelledby={`panel-${i}`}
+            aria-hidden={current !== i}
+            inert={current !== i}
+            className="absolute inset-0"
+          >
+            <div className="story-bg absolute -inset-10" data-alt={i % 2 === 1} />
             <div className="sky-veil" />
             <span className="giant" aria-hidden="true">
               {giant[i]}
             </span>
-            <div className={`container-x relative z-[2] grid h-full items-center gap-12 pt-16 lg:grid-cols-2 ${i % 2 ? 'lg:[&>*:first-child]:order-2' : ''}`}>
+            <div
+              className={`container-x relative z-[2] grid h-full items-center gap-12 pt-16 lg:grid-cols-2 ${i % 2 ? 'lg:[&>*:first-child]:order-2' : ''}`}
+            >
               {text(p, i, N)}
               <div data-visual className="[perspective:1200px] [transform:translateY(calc((0.5-var(--lp))*90px))]">
                 <PanelVisual index={i} />
@@ -523,10 +458,23 @@ function StoryStacked({ panels, text, onActive }: { panels: PanelCopy[]; text: T
           gsap.fromTo(
             sec.querySelectorAll('[data-form]'),
             { y: 60, opacity: 0, scale: 0.9, filter: 'blur(8px)' },
-            { y: 0, opacity: 1, scale: 1, filter: 'blur(0px)', stagger: 0.08, ease: 'power2.out', scrollTrigger: { trigger: sec, start: 'top 85%', end: 'top 30%', scrub: 0.8 } },
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              filter: 'blur(0px)',
+              stagger: 0.08,
+              ease: 'power2.out',
+              scrollTrigger: { trigger: sec, start: 'top 85%', end: 'top 30%', scrub: 0.8 },
+            },
           );
           const fill = sec.querySelector<HTMLElement>('[data-fill]');
-          if (fill) gsap.fromTo(fill, { scaleY: 0 }, { scaleY: 1, ease: 'none', scrollTrigger: { trigger: sec, start: 'top 60%', end: 'bottom 70%', scrub: 0.6 } });
+          if (fill)
+            gsap.fromTo(
+              fill,
+              { scaleY: 0 },
+              { scaleY: 1, ease: 'none', scrollTrigger: { trigger: sec, start: 'top 60%', end: 'bottom 70%', scrub: 0.6 } },
+            );
         });
       }, el);
       cleanup = () => ctx.revert();
@@ -569,26 +517,31 @@ function PanelVisual({ index }: { index: number }) {
       return (
         <div data-form className={`${box} float-y mx-auto flex max-w-md flex-col gap-3`}>
           <Bubble>{demo.chatBot}</Bubble>
-          <Bubble me>
-            {demo.chatMe}
-          </Bubble>
+          <Bubble me>{demo.chatMe}</Bubble>
           <Bubble>{demo.chatBot2}</Bubble>
         </div>
       );
     case 1:
+      // La importadora arma el enlace: campos de la cotización que se «forman» desde la estrella.
       return (
-        <div className="mx-auto grid max-w-lg grid-cols-3 gap-4">
-          {(['restaurant', 'cafe', 'workshop', 'store', 'studio', 'other'] as const).map((s, i) => (
+        <div className={`${box} float-y mx-auto max-w-md`}>
+          {(demo.list.slice(0, 3) as string[]).map((item, i) => (
             <div
-              key={s}
+              key={item}
               data-form
-              className="house-hover lglass float-y rounded-2xl p-3"
-              style={{ '--c': SECTOR_COLOR[s], animationDelay: `${-i}s` } as CSSProperties}
+              className="mb-2.5 flex items-center justify-between rounded-xl border border-ink/10 bg-white/70 px-3 py-2.5 text-sm"
+              style={{ animationDelay: `${-i}s` }}
             >
-              <HouseSprite sector={s} className="mx-auto w-[92%]" />
-              <p className="mt-1 truncate text-center font-display text-xs font-bold">{t(`sectors.${s}`)}</p>
+              <span>{item}</span>
+              <BadgeCheck size={16} className="text-oro" />
             </div>
           ))}
+          <div data-form className="mt-4 rounded-2xl bg-ink px-4 py-3 font-mono text-xs text-white/90">
+            montuno/c/8KQ2xR…
+          </div>
+          <div data-form className="btn btn-primary pointer-events-none mt-3 w-full justify-center">
+            <MessageCircle size={16} /> WhatsApp
+          </div>
         </div>
       );
     case 2:

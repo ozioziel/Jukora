@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { addMoney, computePlatformFee, fromUnits, toUnits } from '@jucumari/shared';
+import { addMoney, computePlatformFee, type DeliveryAddress, fromUnits, toUnits } from '@jucumari/shared';
 import { sql } from 'kysely';
 import type { AuthUser } from '../auth/auth.types';
 import { AccessService } from '../common/access.service';
@@ -300,8 +300,11 @@ export class ProcurementService {
     return rows.map((q) => this.quoteView(q));
   }
 
-  /** Aceptación del comprador: crea el pedido pendiente de pago con la comisión calculada. */
-  async acceptQuote(user: AuthUser, quoteId: string) {
+  /**
+   * Aceptación del comprador: crea el pedido pendiente de pago con la comisión calculada.
+   * El envío lo hace el proveedor (ya cotizado); el comprador entrega su dirección y teléfono.
+   */
+  async acceptQuote(user: AuthUser, quoteId: string, delivery: DeliveryAddress) {
     const q = await this.db.selectFrom('quotes').selectAll().where('id', '=', quoteId).where('buyer_id', '=', user.id).executeTakeFirst();
     if (!q) throw notFound('quote');
     if (q.status !== 'sent') throw conflict('quote_not_open');
@@ -342,7 +345,9 @@ export class ProcurementService {
           currency: q.currency,
           platform_fee: fee.fee,
           platform_fee_percent: String(fee.percent),
-          delivery: JSON.stringify({ country: rfq?.destination_country ?? null, city: rfq?.destination_city ?? null }),
+          fulfillment: 'delivery',
+          shipping: q.shipping,
+          delivery: JSON.stringify({ ...delivery, fulfillment: 'delivery' }),
           is_demo: this.env.DEMO_MODE,
         })
         .returning(['id'])

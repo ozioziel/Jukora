@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('Inicio: portada, seis paneles, navegación y acceso directo a Mi espacio', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(/proveedores verificados/i);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/sin pagar a ciegas/i);
   await expect(page.getByRole('region', { name: /qué negocio quieres armar/i })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2 })).toHaveCount(6);
   const nav = page.getByRole('navigation', { name: /navegación principal/i }).first();

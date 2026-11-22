@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { DeliveryInputSchema } from '@jucumari/shared';
 import { z } from 'zod';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators';
@@ -11,7 +12,7 @@ const FromListing = z.object({
   quantity: z.number().int().positive().max(100_000),
   projectId: z.uuid().optional(),
   requirementId: z.uuid().optional(),
-  city: z.string().trim().max(80).optional(),
+  delivery: DeliveryInputSchema,
 });
 const SupplierUpdate = z.object({
   status: z.enum(['preparing', 'shipped', 'delivery_notified']),
@@ -19,7 +20,7 @@ const SupplierUpdate = z.object({
   tracking: z.string().trim().max(80).optional(),
 });
 const Prepare = z.object({
-  action: z.enum(['fund', 'change_status', 'approve', 'dispute']),
+  action: z.enum(['fund', 'change_status', 'approve', 'dispute', 'claim_advance']),
   evidence: z.string().max(200).optional(),
 });
 const Submit = z.object({ signedXdr: z.string().min(50).max(20_000) });

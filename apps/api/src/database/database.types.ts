@@ -97,8 +97,11 @@ export interface Escrows {
   network: string;
   order_id: string;
   platform_fee_percent: Numeric;
+  provider: Generated<string>;
   roles: Json;
   status: Generated<string>;
+  terms: Generated<Json>;
+  advance_released: Generated<Numeric>;
   updated_at: Generated<Timestamp>;
 }
 
@@ -150,9 +153,11 @@ export interface Listings {
   origin_country: string;
   payment_terms: Generated<string>;
   photos: Generated<Json>;
+  pickup_address: Generated<string>;
   price: Numeric | null;
   quote_only: Generated<boolean>;
   search_doc: Generated<string | null>;
+  shipping_cost: Generated<Numeric>;
   ships_to: Generated<string[]>;
   specs: Generated<Json>;
   status: Generated<string>;
@@ -188,17 +193,24 @@ export interface Orders {
   buyer_id: string;
   created_at: Generated<Timestamp>;
   currency: string;
+  advance_amount: Generated<Numeric>;
   delivery: Generated<Json>;
+  delivery_days: number | null;
+  escrow_mode: Generated<string>;
+  escrow_provider: Generated<string>;
+  fulfillment: Generated<string>;
   id: Generated<string>;
   is_demo: Generated<boolean>;
   listing_id: string | null;
   org_id: string;
   platform_fee: Numeric;
   platform_fee_percent: Numeric;
+  product_url: Generated<string>;
   project_id: string | null;
   quantity: number;
   quote_id: string | null;
   requirement_id: string | null;
+  shipping: Generated<Numeric>;
   status: Generated<string>;
   title: string;
   unit: Generated<string>;
@@ -416,11 +428,45 @@ export interface Shipments {
   tracking: Generated<string>;
 }
 
+export interface PaymentLinks {
+  advance_amount: Generated<Numeric>;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency: Generated<string>;
+  delivery_days: number;
+  description: Generated<string>;
+  expires_at: Timestamp;
+  id: Generated<string>;
+  is_demo: Generated<boolean>;
+  mode: Generated<string>;
+  order_id: string | null;
+  org_id: string;
+  price: Numeric;
+  product_url: Generated<string>;
+  shipping: Generated<Numeric>;
+  status: Generated<string>;
+  title: string;
+  token: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface ConsentRecords {
+  accepted_at: Generated<Timestamp>;
+  disclosure_hash: string;
+  disclosure_text: string;
+  disclosure_version: string;
+  id: Generated<string>;
+  order_id: string;
+  terms_hash: string;
+  user_id: string;
+}
+
 export interface DB {
   app_users: AppUsers;
   audit_events: AuditEvents;
   auth_challenges: AuthChallenges;
   auth_sessions: AuthSessions;
+  consent_records: ConsentRecords;
   disputes: Disputes;
   escrow_txs: EscrowTxs;
   escrows: Escrows;
@@ -431,6 +477,7 @@ export interface DB {
   notifications: Notifications;
   orders: Orders;
   organizations: Organizations;
+  payment_links: PaymentLinks;
   projects: Projects;
   quota_ledger: QuotaLedger;
   quotes: Quotes;
