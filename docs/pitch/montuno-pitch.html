@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Montuno · pitch deck</title>
+<style>
+  @font-face { font-family: 'Unbounded'; src: url('../../node_modules/@fontsource-variable/unbounded/files/unbounded-latin-wght-normal.woff2') format('woff2'); font-weight: 200 900; }
+  @font-face { font-family: 'Manrope'; src: url('../../node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2') format('woff2'); font-weight: 200 800; }
+  @page { size: 1920px 1080px; margin: 0; }
+  :root { --paper: #fafaf7; --ink: #0b0b0c; --navy: #0b2c48; --muted: #6b6d73; --line: #e7e5e0; --moon: #f7f1e3; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #ddd; font-family: 'Manrope', sans-serif; color: var(--ink); }
+  .s { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); page-break-after: always; padding: 120px 140px; }
+  .s.dark { background: var(--ink); color: var(--moon); }
+  .s.navy { background: var(--navy); color: var(--moon); }
+  .eyebrow { font: 600 22px 'Manrope'; letter-spacing: .3em; text-transform: uppercase; color: var(--navy); }
+  .dark .eyebrow, .navy .eyebrow { color: #9fb3c6; }
+  h1 { font: 600 112px/1.02 'Manrope'; letter-spacing: -.04em; margin-top: 36px; }
+  h2 { font: 600 88px/1.05 'Manrope'; letter-spacing: -.035em; margin-top: 30px; }
+  .big { font: 500 150px/1 'Unbounded'; letter-spacing: -.02em; }
+  .sub { font: 400 36px/1.4 'Manrope'; color: var(--muted); margin-top: 34px; max-width: 1200px; }
+  .dark .sub, .navy .sub { color: #c9d2dc; }
+  .wm { font: 500 34px 'Unbounded'; letter-spacing: .3em; color: var(--navy); }
+  .mtn { position: absolute; left: 0; bottom: 0; width: 100%; height: 46%; }
+  .moon { position: absolute; width: 120px; height: 120px; border-radius: 50%; box-shadow: -26px 10px 0 0 currentColor; transform: rotate(-20deg); }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 60px; margin-top: 90px; }
+  .step { border-top: 3px solid currentColor; padding-top: 34px; }
+  .step .n { font: 500 30px 'Unbounded'; color: var(--navy); }
+  .navy .step .n, .dark .step .n { color: #9fb3c6; }
+  .step h3 { font: 600 46px/1.15 'Manrope'; margin-top: 18px; letter-spacing: -.02em; }
+  .tech { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 80px; }
+  .tile { border: 2px solid var(--line); border-radius: 28px; padding: 40px; background: #fff; }
+  .tile b { display: block; font: 600 40px 'Manrope'; letter-spacing: -.02em; }
+  .tile span { display: block; margin-top: 12px; font-size: 26px; color: var(--muted); }
+  .pill { display: inline-block; margin-top: 18px; font: 600 18px 'Manrope'; letter-spacing: .14em; text-transform: uppercase; padding: 8px 16px; border-radius: 99px; border: 2px solid var(--line); color: var(--navy); }
+  .bar { display: flex; height: 34px; border-radius: 99px; overflow: hidden; margin-top: 70px; width: 1300px; }
+  .bar i { display: block; }
+  .legend { display: flex; justify-content: space-between; width: 1300px; font-size: 28px; margin-top: 20px; color: #c9d2dc; }
+  .foot { position: absolute; left: 140px; bottom: 80px; font-size: 26px; color: var(--muted); }
+  .logo { width: 360px; mix-blend-mode: multiply; }
+</style>
+</head>
+<body>
+
+<!-- 1 · Portada -->
+<section class="s">
+  <img class="logo" src="montuno-logo.webp" alt="Montuno">
+  <h1 style="margin-top:60px">Compra por WhatsApp<br><span style="color:var(--navy)">sin pagar a ciegas.</span></h1>
+  <p class="sub">Pagos protegidos en Stellar para tratos que se acuerdan por redes en Bolivia.</p>
+</section>
+
+<!-- 2 · Problema -->
+<section class="s dark">
+  <div class="eyebrow">El problema</div>
+  <h2>Pagas el 100 %<br>por adelantado<br>a alguien que no conoces.</h2>
+  <p class="sub">Si el pedido no llega, o llega distinto, el dinero no vuelve.</p>
+  <svg class="mtn" viewBox="0 0 1920 500" preserveAspectRatio="none"><path d="M0 500 L380 330 L460 360 L620 220 L700 250 L880 40 L940 120 L1000 90 L1080 260 L1180 230 L1360 330 L1480 300 L1920 500 Z" fill="#16181c"/></svg>
+</section>
+
+<!-- 3 · Escuchamos -->
+<section class="s">
+  <div class="eyebrow">Lo escuchamos</div>
+  <h2>Entrevistamos a quienes<br>compran por redes.</h2>
+  <p class="sub">Escucha sus testimonios en el video.</p>
+  <div class="moon" style="right:240px;top:200px;color:var(--navy)"></div>
+</section>
+
+<!-- 4 · Solución -->
+<section class="s navy">
+  <div class="eyebrow">La solución</div>
+  <h2>Un enlace. Un pago protegido.</h2>
+  <div class="steps">
+    <div class="step"><div class="n">01</div><h3>El vendedor crea el enlace y lo manda por WhatsApp</h3></div>
+    <div class="step"><div class="n">02</div><h3>Pagas con QR y el dinero queda retenido en Stellar</h3></div>
+    <div class="step"><div class="n">03</div><h3>Recibes, confirmas y el vendedor cobra</h3></div>
+  </div>
+</section>
+
+<!-- 5 · Anticipo -->
+<section class="s dark">
+  <div class="eyebrow">Para importadoras</div>
+  <h2>¿Necesita comprar primero?<br>Anticipo acordado.</h2>
+  <div class="bar"><i style="width:30%;background:#9fb3c6"></i><i style="width:70%;background:var(--moon)"></i></div>
+  <div class="legend"><span>30 % anticipo al vendedor</span><span>70 % protegido hasta la entrega</span></div>
+  <p class="sub">El comprador lo acepta antes de pagar. Si hay problema, decide un árbitro.</p>
+</section>
+
+<!-- 6 · Tecnología -->
+<section class="s">
+  <div class="eyebrow">Cómo funciona</div>
+  <h2>Hecho sobre Stellar.</h2>
+  <div class="tech">
+    <div class="tile"><b>Stellar</b><span>Red y token de pago</span><div class="pill">Testnet</div></div>
+    <div class="tile"><b>Trustless Work</b><span>Escrow: retiene y libera</span></div>
+    <div class="tile"><b>Soroban</b><span>Contrato con anticipo</span></div>
+    <div class="tile"><b>Pollar</b><span>Entrar con tu correo</span></div>
+    <div class="tile"><b>QR en bolivianos</b><span>Simulado en testnet</span></div>
+    <div class="tile"><b>IA</b><span>Arma tu lista de compras</span></div>
+  </div>
+</section>
+
+<!-- 7 · Modelo -->
+<section class="s navy">
+  <div class="eyebrow">Modelo de negocio</div>
+  <div class="big" style="margin-top:80px">2,5 %</div>
+  <p class="sub" style="font-size:44px;color:var(--moon)">por venta, lo paga el vendedor.<br>El comprador no paga nada.</p>
+</section>
+
+<!-- 8 · Cierre -->
+<section class="s">
+  <img class="logo" src="montuno-logo.webp" alt="Montuno" style="width:440px">
+  <h2 style="margin-top:50px">Cada trato,<br><span style="color:var(--navy)">protegido.</span></h2>
+  <p class="sub">Demo en vivo: jukora.oziel.dev · Código: github.com/ozioziel/Jukora</p>
+</section>
+
+</body>
+</html>
